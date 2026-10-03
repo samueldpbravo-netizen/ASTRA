@@ -62,8 +62,8 @@ h2{font-weight:200;text-align:center;font-size:clamp(26px,5vw,52px);letter-spaci
 .card p{margin:0;color:var(--dim);font-size:14.5px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px;border-block:1px solid var(--line);padding:46px 0;text-align:center}
 .stats b{display:block;font-size:clamp(34px,6vw,58px);font-weight:200;text-shadow:0 0 24px rgba(255,255,255,.5)}
-.rv{opacity:0;transform:translateY(30px);transition:1s cubic-bezier(.2,.7,.2,1)}
-.rv.in{opacity:1;transform:none}
+.js .rv{opacity:0;transform:translateY(30px);transition:1s cubic-bezier(.2,.7,.2,1)}
+.js .rv.in{opacity:1;transform:none}
 /* AUTH */
 .auth{max-width:440px;margin:0 auto;padding:40px 34px;border:1px solid var(--line);background:rgba(0,0,0,.65);backdrop-filter:blur(14px);box-shadow:0 0 90px rgba(255,255,255,.1);position:relative}
 .auth .logo{display:block;width:84px;margin:0 auto 14px;border-radius:50%}
@@ -189,6 +189,7 @@ footer{text-align:center;padding:40px 6vw 60px;color:#555;font-size:11px;letter-
 </div>
 
 <script>
+document.documentElement.className='js';
 /* ---------- starfield + parallax ---------- */
 (function(){
   var c=document.getElementById('stars'),x=c.getContext('2d'),S=[],W,H,mx=0,my=0;
@@ -208,15 +209,17 @@ var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isInte
   e.target.querySelectorAll('[data-n]').forEach(function(b){var n=+b.dataset.n,k=0,s=b.dataset.s||'';var iv=setInterval(function(){k+=Math.max(1,n/40);if(k>=n){k=n;clearInterval(iv)}b.textContent=Math.round(k)+s},35)});
   io.unobserve(e.target)})},{threshold:.2});
 document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
+</script>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/FIREBASE_VERSION/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
          signOut, onAuthStateChanged, updateProfile }
-  from "https://www.gstatic.com/firebasejs/FIREBASE_VERSION/firebase-auth.js";
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
-  from "https://www.gstatic.com/firebasejs/FIREBASE_VERSION/firebase-firestore.js";
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps) */
 const app = initializeApp({
   apiKey: "PASTE_HERE",
   authDomain: "PASTE_HERE",
@@ -229,7 +232,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 
-/* ---- login / signup tabs ---- */
 let mode = 'login';
 function setMode(m){
   mode = m;
@@ -251,7 +253,6 @@ const ERR = {
   'auth/too-many-requests':    'Too many attempts. Try again later.'
 };
 
-/* ---- sign up / log in ---- */
 $('go').onclick = async () => {
   const email = $('email').value.trim().toLowerCase();
   const pw = $('pass').value;
@@ -267,12 +268,11 @@ $('go').onclick = async () => {
       await signInWithEmailAndPassword(auth, email, pw);
     }
   } catch (e) {
-    $('msg').textContent = ERR[e.code] || 'Something went wrong. Try again.';
+    $('msg').textContent = ERR[e.code] || 'Error: ' + (e.code || e.message);
   }
 };
 $('out').onclick = () => signOut(auth);
 
-/* ---- show site or dashboard depending on login state ---- */
 onAuthStateChanged(auth, user => {
   $('site').classList.toggle('hide', !!user);
   $('app').classList.toggle('hide', !user);
@@ -280,7 +280,6 @@ onAuthStateChanged(auth, user => {
   if (user) loadDash(user);
 });
 
-/* ---- dashboard ---- */
 const MS = ["Complete morning skin routine","Hydrate: finish your water goal",
   "Train or walk for 30 minutes","Posture check, 3 times today","Sleep before midnight"];
 const MODS = [["Skin Protocol",40],["Grooming Lab",25],["Body & Posture",55],
@@ -289,11 +288,10 @@ const MODS = [["Skin Protocol",40],["Grooming Lab",25],["Body & Posture",55],
 async function loadDash(user){
   $('hi').textContent = 'Welcome, ' + (user.displayName || 'explorer');
   $('date').textContent = new Date().toDateString();
-
   const today = new Date().toISOString().slice(0, 10);
   const ref = doc(db, 'users', user.uid, 'days', today);
-  const snap = await getDoc(ref);
-  let done = snap.exists() ? snap.data().done : [];
+  let done = [];
+  try { const snap = await getDoc(ref); if (snap.exists()) done = snap.data().done; } catch (e) { console.error(e); }
 
   function paint(){
     $('ms').innerHTML = '';
@@ -301,11 +299,11 @@ async function loadDash(user){
       const d = document.createElement('div');
       const on = done.includes(i);
       d.className = 'm' + (on ? ' done' : '');
-      d.innerHTML = '<b>' + (on ? '✓' : '') + '</b><span>' + t + '</span>';
+      d.innerHTML = '<b>' + (on ? '\u2713' : '') + '</b><span>' + t + '</span>';
       d.onclick = async () => {
         done = on ? done.filter(x => x !== i) : [...done, i];
         paint();
-        await setDoc(ref, { done, updatedAt: serverTimestamp() });
+        try { await setDoc(ref, { done, updatedAt: serverTimestamp() }); } catch (e) { console.error(e); }
       };
       $('ms').appendChild(d);
     });
@@ -315,7 +313,6 @@ async function loadDash(user){
     $('rg').style.strokeDashoffset = 327 - 327 * p / 100;
   }
   paint();
-
   $('mods').innerHTML = MODS.map(m =>
     '<div class="row"><span>' + m[0] + '</span><span>' + m[1] + '%</span></div>' +
     '<div class="bar"><i style="width:' + m[1] + '%"></i></div>').join('');

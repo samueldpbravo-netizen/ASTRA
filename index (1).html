@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASTRA — Become Who You're Meant To Be</title>
+<link rel="icon" href="favicon.png">
+<style>
+:root{--fg:#fff;--dim:#8d8d8d;--line:rgba(255,255,255,.15);--mono:"SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#000;color:var(--fg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:hidden;padding-top:env(safe-area-inset-top)}
+body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+#stars{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+#glow{position:fixed;width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.08),transparent 65%);pointer-events:none;z-index:1;left:50%;top:50%}
+.view{position:relative;z-index:2}
+.hide{display:none!important}
+.mono{font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase;font-size:11px;color:var(--dim)}
+nav{position:fixed;top:env(safe-area-inset-top);left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:16px 5vw;background:linear-gradient(#000c,transparent)}
+.brand{display:flex;align-items:center;gap:12px;letter-spacing:.45em;font-weight:600;font-size:14px;color:#fff;text-decoration:none}
+.brand img{width:34px;height:34px;border-radius:50%}
+.nr{display:flex;gap:10px;align-items:center}
+.btn{font:inherit;font-size:12px;letter-spacing:.2em;text-transform:uppercase;padding:12px 26px;border:1px solid var(--fg);background:transparent;color:var(--fg);border-radius:999px;cursor:pointer;text-decoration:none;display:inline-block;transition:.25s;position:relative}
+.btn:hover{box-shadow:0 0 28px rgba(255,255,255,.55);transform:translateY(-2px)}
+.btn.solid{background:#fff;color:#000;font-weight:700}
+.btn.ghost{border-color:var(--line)}
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:110px 6vw 90px;position:relative;overflow:hidden}
+.floor{position:absolute;left:-50%;right:-50%;bottom:-8%;height:55%;background:linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px) 0 0/100% 48px,linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px) 0 0/64px 100%;transform:perspective(380px) rotateX(68deg);animation:grid 3s linear infinite;-webkit-mask-image:linear-gradient(transparent,#000 70%);mask-image:linear-gradient(transparent,#000 70%);opacity:.5}
+@keyframes grid{to{background-position:0 48px,0 0}}
+.emblem{position:relative;width:clamp(190px,34vw,330px);aspect-ratio:1;margin-bottom:34px}
+.emblem img{width:100%;height:100%;border-radius:50%;position:relative;z-index:2;filter:drop-shadow(0 0 40px rgba(255,255,255,.35));animation:fl 7s ease-in-out infinite}
+.emblem i{position:absolute;inset:-12%;border:1px solid var(--line);border-radius:50%;animation:spin 18s linear infinite}
+.emblem i:nth-child(2){inset:-26%;border-style:dashed;animation-duration:32s;animation-direction:reverse}
+.emblem i:nth-child(3){inset:-42%;border-color:rgba(255,255,255,.07);animation-duration:55s}
+.emblem i:before{content:"";position:absolute;top:-3px;left:50%;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 14px 3px #fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fl{50%{transform:translateY(-14px)}}
+h1{margin:0;font-weight:200;font-size:clamp(46px,12vw,130px);letter-spacing:.3em;margin-left:.3em;text-shadow:0 0 50px rgba(255,255,255,.45);position:relative}
+h1.glitch:before,h1.glitch:after{content:attr(data-t);position:absolute;inset:0;opacity:.6}
+h1.glitch:before{animation:gl 5s infinite;clip-path:inset(0 0 60% 0);color:#aaa}
+h1.glitch:after{animation:gl 5s infinite reverse .3s;clip-path:inset(60% 0 0 0);color:#666}
+@keyframes gl{0%,92%,100%{transform:none}94%{transform:translateX(-6px)}96%{transform:translateX(6px)}98%{transform:translateX(-3px)}}
+.sub{margin:22px 0 14px;min-height:22px;font-family:var(--mono);letter-spacing:.25em;text-transform:uppercase;font-size:12px;color:#ddd}
+.sub:after{content:"▍";animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.lead{max-width:600px;color:#c4c4c4;font-size:18px;margin:0 0 36px}
+.cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.scroll{position:absolute;bottom:22px;left:50%;transform:translateX(-50%)}
+/* SECTIONS */
+section{max-width:1120px;margin:0 auto;padding:100px 6vw}
+h2{font-weight:200;text-align:center;font-size:clamp(26px,5vw,52px);letter-spacing:.14em;margin:10px 0 18px;text-transform:uppercase}
+.center{text-align:center;max-width:680px;margin:0 auto 56px;color:#bdbdbd;font-size:17px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.card{position:relative;padding:30px;background:rgba(255,255,255,.035);border:1px solid var(--line);backdrop-filter:blur(8px);transition:.3s}
+.card:before,.card:after{content:"";position:absolute;width:14px;height:14px;border:1px solid #fff;opacity:.7}
+.card:before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.card:after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.card:hover{background:rgba(255,255,255,.08);box-shadow:0 0 40px rgba(255,255,255,.12);transform:translateY(-5px)}
+.card .n{font-family:var(--mono);color:var(--dim);font-size:11px;letter-spacing:.2em}
+.card h3{margin:10px 0 8px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;font-size:15px}
+.card p{margin:0;color:var(--dim);font-size:14.5px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px;border-block:1px solid var(--line);padding:46px 0;text-align:center}
+.stats b{display:block;font-size:clamp(34px,6vw,58px);font-weight:200;text-shadow:0 0 24px rgba(255,255,255,.5)}
+.js .rv{opacity:0;transform:translateY(30px);transition:1s cubic-bezier(.2,.7,.2,1)}
+.js .rv.in{opacity:1;transform:none}
+/* AUTH */
+.auth{max-width:440px;margin:0 auto;padding:40px 34px;border:1px solid var(--line);background:rgba(0,0,0,.65);backdrop-filter:blur(14px);box-shadow:0 0 90px rgba(255,255,255,.1);position:relative}
+.auth .logo{display:block;width:84px;margin:0 auto 14px;border-radius:50%}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);margin:22px 0}
+.tabs button{font:inherit;font-family:var(--mono);letter-spacing:.2em;font-size:11px;text-transform:uppercase;padding:13px;background:none;border:0;color:var(--dim);cursor:pointer}
+.tabs button.on{background:#fff;color:#000}
+label{display:block;margin:0 0 16px}
+label span{display:block;margin-bottom:6px}
+input{width:100%;padding:14px 16px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:#fff;font:inherit;outline:0;transition:.25s}
+input:focus{border-color:#fff;box-shadow:0 0 22px rgba(255,255,255,.25)}
+.msg{min-height:20px;font-size:13px;color:#ddd;text-align:center;margin:4px 0 12px;font-family:var(--mono)}
+.auth .btn{width:100%}
+footer{text-align:center;padding:40px 6vw 60px;color:#555;font-size:11px;letter-spacing:.25em}
+/* DASHBOARD */
+.dash{min-height:100vh;max-width:1120px;margin:0 auto;padding:110px 6vw 60px}
+.dh{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:18px;margin-bottom:34px}
+.dh h2{text-align:left;margin:6px 0 0}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.ring{width:150px;height:150px;display:block;margin:6px auto 14px}
+.ring circle{fill:none;stroke-width:5}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:#fff;stroke-linecap:round;filter:drop-shadow(0 0 6px #fff);transition:1.2s;transform:rotate(-90deg);transform-origin:50% 50%}
+.ring text{fill:#fff;font-size:28px;font-weight:200;text-anchor:middle}
+.bar{height:3px;background:var(--line);margin:8px 0 18px}
+.bar i{display:block;height:100%;background:#fff;box-shadow:0 0 10px #fff;transition:1s}
+.row{display:flex;justify-content:space-between;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.m{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+.m:last-child{border:0}
+.m b{width:18px;height:18px;border:1px solid #fff;display:grid;place-items:center;font-size:12px;color:#000;flex:none}
+.m.done b{background:#fff}
+.m.done span{color:var(--dim);text-decoration:line-through}
+@media(max-width:600px){.nr .ghost{display:none}.lead{font-size:16px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas><div id="glow"></div>
+
+<!-- ========== PUBLIC SITE ========== -->
+<div id="site" class="view">
+<nav>
+  <a class="brand" href="#top"><img src="astra-icon.png" alt="ASTRA icon">ASTRA</a>
+  <div class="nr"><a class="btn ghost" href="#access" data-mode="login">Log in</a><a class="btn solid" href="#access" data-mode="signup">Join</a></div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="floor"></div>
+  <div class="emblem"><i></i><i></i><i></i><img src="astra-icon.png" alt="ASTRA emblem"></div>
+  <h1 class="glitch" data-t="ASTRA">ASTRA</h1>
+  <div class="sub" id="type"></div>
+  <p class="lead">The guide that improves you — your face, your body, your habits, your confidence. Not as a promise. As a system you run every day.</p>
+  <div class="cta"><a class="btn solid" href="#access" data-mode="signup">Begin your ascent</a><a class="btn" href="#why">Why ASTRA</a></div>
+  <span class="scroll mono">Scroll ↓</span>
+</header>
+
+<section id="why">
+  <div class="mono rv" style="text-align:center">// Transmission 001</div>
+  <h2 class="rv">This app will make you better.</h2>
+  <p class="center rv">Looking your best is just one outcome. ASTRA is built to improve you as a person: more discipline, sharper habits, stronger self-belief. Small daily upgrades compound until the person in the mirror is someone you're proud of.</p>
+  <div class="stats rv">
+    <div><b data-n="6">0</b><span class="mono">Core modules</span></div>
+    <div><b data-n="30">0</b><span class="mono">Day ascent plan</span></div>
+    <div><b data-n="100" data-s="%">0</b><span class="mono">Personalized</span></div>
+    <div><b data-n="1">0</b><span class="mono">You. Upgraded.</span></div>
+  </div>
+</section>
+
+<section id="features">
+  <h2 class="rv">Your upgrade stack</h2>
+  <p class="center rv">Six modules working together. Each one builds the next.</p>
+  <div class="grid">
+    <div class="card rv"><div class="n">01 / SKIN</div><h3>Skin Protocol</h3><p>A routine built for your skin type, with simple steps you can actually keep.</p></div>
+    <div class="card rv"><div class="n">02 / GROOM</div><h3>Grooming Lab</h3><p>Hair, brows and facial hair matched to your face structure.</p></div>
+    <div class="card rv"><div class="n">03 / BODY</div><h3>Body & Posture</h3><p>Training and posture plans that build presence and strength.</p></div>
+    <div class="card rv"><div class="n">04 / STYLE</div><h3>Style Engine</h3><p>Colors, fits and details that work with your features.</p></div>
+    <div class="card rv"><div class="n">05 / BASE</div><h3>Sleep & Nutrition</h3><p>The fundamentals that quietly drive everything else.</p></div>
+    <div class="card rv"><div class="n">06 / MIND</div><h3>Mindset & Discipline</h3><p>Daily missions, streaks and confidence work that make change stick.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2 class="rv">Three steps to orbit</h2>
+  <div class="grid">
+    <div class="card rv"><div class="n">STEP 01</div><h3>Scan</h3><p>Tell ASTRA your goals, routine and starting point.</p></div>
+    <div class="card rv"><div class="n">STEP 02</div><h3>Plan</h3><p>Receive a prioritized roadmap, built around you.</p></div>
+    <div class="card rv"><div class="n">STEP 03</div><h3>Ascend</h3><p>Complete daily missions and watch your progress compound.</p></div>
+  </div>
+</section>
+
+<section id="access">
+  <h2 class="rv">Access ASTRA</h2>
+  <p class="center rv">Create your account or log in to enter your personal dashboard.</p>
+  <div class="auth rv">
+    <img class="logo" src="astra-icon.png" alt="">
+    <div class="mono" style="text-align:center">Secure entry // Dashboard</div>
+    <div class="tabs"><button id="tL" class="on">Log in</button><button id="tS">Sign up</button></div>
+    <div id="fN" class="hide"><label><span class="mono">Name</span><input id="name" autocomplete="name" placeholder="Your name"></label></div>
+    <label><span class="mono">Email</span><input id="email" type="email" autocomplete="email" placeholder="you@email.com"></label>
+    <label><span class="mono">Password</span><input id="pass" type="password" autocomplete="current-password" placeholder="••••••••"></label>
+    <div class="msg" id="msg"></div>
+    <button class="btn solid" id="go">Enter ASTRA</button>
+  </div>
+</section>
+<footer>ASTRA · AD ASTRA PER ASPERA</footer>
+</div>
+
+<!-- ========== DASHBOARD ========== -->
+<div id="app" class="view hide">
+<nav>
+  <a class="brand" href="#"><img src="astra-icon.png" alt="">ASTRA</a>
+  <div class="nr"><button class="btn ghost" id="out">Log out</button></div>
+</nav>
+<main class="dash">
+  <div class="dh"><div><div class="mono" id="date"></div><h2 id="hi">Welcome</h2></div><div class="mono">Status // Online</div></div>
+  <div class="dg">
+    <div class="card"><div class="n">ASCENT LEVEL</div>
+      <svg class="ring" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="rg" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="327"/><text x="60" y="69" id="pct">0%</text></svg>
+      <div class="row"><span>Today</span><span id="cnt">0/5</span></div></div>
+    <div class="card"><div class="n">DAILY MISSIONS</div><div id="ms" style="margin-top:8px"></div></div>
+    <div class="card"><div class="n">MODULE PROGRESS</div><div id="mods" style="margin-top:14px"></div></div>
+  </div>
+</main>
+</div>
+
+<script>
+document.documentElement.className='js';
+/* ---------- starfield + parallax ---------- */
+(function(){
+  var c=document.getElementById('stars'),x=c.getContext('2d'),S=[],W,H,mx=0,my=0;
+  function init(){W=c.width=innerWidth;H=c.height=innerHeight;S=[];for(var i=0;i<Math.min(260,W*H/5500);i++)S.push({x:Math.random()*W,y:Math.random()*H,z:Math.random()*2+.2,t:Math.random()*6.3})}
+  addEventListener('mousemove',function(e){mx=(e.clientX/W-.5);my=(e.clientY/H-.5);var g=document.getElementById('glow');g.style.left=e.clientX+'px';g.style.top=e.clientY+'px'});
+  function draw(){x.clearRect(0,0,W,H);S.forEach(function(s){s.t+=.02;s.y+=s.z*.12;if(s.y>H)s.y=0;
+    x.globalAlpha=.3+.7*Math.abs(Math.sin(s.t));x.fillStyle='#fff';x.beginPath();
+    x.arc(s.x-mx*s.z*30,s.y-my*s.z*30,s.z*.6,0,6.3);x.fill()});requestAnimationFrame(draw)}
+  addEventListener('resize',init);init();draw();
+})();
+/* ---------- typewriter ---------- */
+(function(){var L=["Become who you're meant to be","Upgrade your face. Upgrade your life.","Discipline. Confidence. Presence."],i=0,j=0,d=false,el=document.getElementById('type');
+  (function t(){var s=L[i];el.firstChild&&(el.firstChild.nodeValue=s.slice(0,j));if(!el.firstChild)el.insertBefore(document.createTextNode(''),el.firstChild);
+    if(!d&&j++>=s.length){d=true;return setTimeout(t,1800)}if(d&&j--<=0){d=false;i=(i+1)%L.length}setTimeout(t,d?25:55)})()})();
+/* ---------- reveal + counters ---------- */
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add('in');
+  e.target.querySelectorAll('[data-n]').forEach(function(b){var n=+b.dataset.n,k=0,s=b.dataset.s||'';var iv=setInterval(function(){k+=Math.max(1,n/40);if(k>=n){k=n;clearInterval(iv)}b.textContent=Math.round(k)+s},35)});
+  io.unobserve(e.target)})},{threshold:.2});
+document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+         signOut, onAuthStateChanged, updateProfile }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps) */
+const app = initializeApp({
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+
+let mode = 'login';
+function setMode(m){
+  mode = m;
+  $('tL').classList.toggle('on', m === 'login');
+  $('tS').classList.toggle('on', m === 'signup');
+  $('fN').classList.toggle('hide', m === 'login');
+  $('msg').textContent = '';
+}
+$('tL').onclick = () => setMode('login');
+$('tS').onclick = () => setMode('signup');
+document.querySelectorAll('[data-mode]').forEach(a =>
+  a.addEventListener('click', () => setMode(a.dataset.mode)));
+
+const ERR = {
+  'auth/email-already-in-use': 'Account already exists. Log in instead.',
+  'auth/invalid-credential':   'Invalid email or password.',
+  'auth/invalid-email':        'Enter a valid email.',
+  'auth/weak-password':        'Password must be 6+ characters.',
+  'auth/too-many-requests':    'Too many attempts. Try again later.'
+};
+
+$('go').onclick = async () => {
+  const email = $('email').value.trim().toLowerCase();
+  const pw = $('pass').value;
+  const name = $('name').value.trim() || email.split('@')[0];
+  $('msg').textContent = '';
+  try {
+    if (mode === 'signup') {
+      const cred = await createUserWithEmailAndPassword(auth, email, pw);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, 'users', cred.user.uid),
+        { name, email, createdAt: serverTimestamp() });
+    } else {
+      await signInWithEmailAndPassword(auth, email, pw);
+    }
+  } catch (e) {
+    $('msg').textContent = ERR[e.code] || 'Error: ' + (e.code || e.message);
+  }
+};
+$('out').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, user => {
+  $('site').classList.toggle('hide', !!user);
+  $('app').classList.toggle('hide', !user);
+  scrollTo(0, 0);
+  if (user) loadDash(user);
+});
+
+const MS = ["Complete morning skin routine","Hydrate: finish your water goal",
+  "Train or walk for 30 minutes","Posture check, 3 times today","Sleep before midnight"];
+const MODS = [["Skin Protocol",40],["Grooming Lab",25],["Body & Posture",55],
+  ["Style Engine",15],["Sleep & Nutrition",35],["Mindset",60]];
+
+async function loadDash(user){
+  $('hi').textContent = 'Welcome, ' + (user.displayName || 'explorer');
+  $('date').textContent = new Date().toDateString();
+  const today = new Date().toISOString().slice(0, 10);
+  const ref = doc(db, 'users', user.uid, 'days', today);
+  let done = [];
+  try { const snap = await getDoc(ref); if (snap.exists()) done = snap.data().done; } catch (e) { console.error(e); }
+
+  function paint(){
+    $('ms').innerHTML = '';
+    MS.forEach((t, i) => {
+      const d = document.createElement('div');
+      const on = done.includes(i);
+      d.className = 'm' + (on ? ' done' : '');
+      d.innerHTML = '<b>' + (on ? '\u2713' : '') + '</b><span>' + t + '</span>';
+      d.onclick = async () => {
+        done = on ? done.filter(x => x !== i) : [...done, i];
+        paint();
+        try { await setDoc(ref, { done, updatedAt: serverTimestamp() }); } catch (e) { console.error(e); }
+      };
+      $('ms').appendChild(d);
+    });
+    const p = Math.round(done.length / MS.length * 100);
+    $('pct').textContent = p + '%';
+    $('cnt').textContent = done.length + '/' + MS.length;
+    $('rg').style.strokeDashoffset = 327 - 327 * p / 100;
+  }
+  paint();
+  $('mods').innerHTML = MODS.map(m =>
+    '<div class="row"><span>' + m[0] + '</span><span>' + m[1] + '%</span></div>' +
+    '<div class="bar"><i style="width:' + m[1] + '%"></i></div>').join('');
+}
+</script>
+</body>
+</html>

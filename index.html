@@ -208,40 +208,119 @@ var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isInte
   e.target.querySelectorAll('[data-n]').forEach(function(b){var n=+b.dataset.n,k=0,s=b.dataset.s||'';var iv=setInterval(function(){k+=Math.max(1,n/40);if(k>=n){k=n;clearInterval(iv)}b.textContent=Math.round(k)+s},35)});
   io.unobserve(e.target)})},{threshold:.2});
 document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
-/* ---------- auth (front-end demo) ---------- */
-var $=function(i){return document.getElementById(i)},mode='login',LS=localStorage;
-function setMode(m){mode=m;$('tL').classList.toggle('on',m=='login');$('tS').classList.toggle('on',m=='signup');$('fN').classList.toggle('hide',m=='login');$('msg').textContent=''}
-$('tL').onclick=function(){setMode('login')};$('tS').onclick=function(){setMode('signup')};
-document.querySelectorAll('[data-mode]').forEach(function(a){a.addEventListener('click',function(){setMode(a.dataset.mode)})});
-function hash(s){return crypto.subtle?crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)).then(function(b){return Array.from(new Uint8Array(b)).map(function(v){return v.toString(16).padStart(2,'0')}).join('')}):Promise.resolve(btoa(s))}
-function users(){try{return JSON.parse(LS.getItem('astra_users')||'{}')}catch(e){return{}}}
-$('go').onclick=function(){
-  var em=$('email').value.trim().toLowerCase(),pw=$('pass').value,nm=$('name').value.trim(),m=$('msg');
-  if(!/^\S+@\S+\.\S+$/.test(em))return m.textContent='Enter a valid email.';
-  if(pw.length<6)return m.textContent='Password must be 6+ characters.';
-  hash(pw).then(function(h){var U=users();
-    if(mode=='signup'){if(U[em])return m.textContent='Account already exists. Log in.';
-      U[em]={name:nm||em.split('@')[0],h:h};LS.setItem('astra_users',JSON.stringify(U));enter(em)}
-    else{if(!U[em]||U[em].h!==h)return m.textContent='Invalid email or password.';enter(em)}})};
-function enter(em){LS.setItem('astra_session',em);show()}
-$('out').onclick=function(){LS.removeItem('astra_session');show()};
-/* ---------- dashboard ---------- */
-var MS=["Complete morning skin routine","Hydrate: finish your water goal","Train or walk for 30 minutes","Posture check, 3 times today","Sleep before midnight"],
-    MODS=[["Skin Protocol",40],["Grooming Lab",25],["Body & Posture",55],["Style Engine",15],["Sleep & Nutrition",35],["Mindset",60]];
-function show(){var em=LS.getItem('astra_session'),u=em&&users()[em];
-  $('site').classList.toggle('hide',!!u);$('app').classList.toggle('hide',!u);scrollTo(0,0);if(u)dash(em,u)}
-function dash(em,u){
-  $('hi').textContent='Welcome, '+u.name;
-  $('date').textContent=new Date().toDateString();
-  var key='astra_m_'+em+'_'+new Date().toDateString(),done=[];try{done=JSON.parse(LS.getItem(key)||'[]')}catch(e){}
-  function paint(){$('ms').innerHTML='';MS.forEach(function(t,i){var d=document.createElement('div');d.className='m'+(done.indexOf(i)>-1?' done':'');
-    d.innerHTML='<b>'+(done.indexOf(i)>-1?'✓':'')+'</b><span>'+t+'</span>';
-    d.onclick=function(){var k=done.indexOf(i);k>-1?done.splice(k,1):done.push(i);LS.setItem(key,JSON.stringify(done));paint()};$('ms').appendChild(d)});
-    var p=Math.round(done.length/MS.length*100);$('pct').textContent=p+'%';$('cnt').textContent=done.length+'/'+MS.length;
-    $('rg').style.strokeDashoffset=327-327*p/100}
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/FIREBASE_VERSION/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+         signOut, onAuthStateChanged, updateProfile }
+  from "https://www.gstatic.com/firebasejs/FIREBASE_VERSION/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/FIREBASE_VERSION/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+
+/* ---- login / signup tabs ---- */
+let mode = 'login';
+function setMode(m){
+  mode = m;
+  $('tL').classList.toggle('on', m === 'login');
+  $('tS').classList.toggle('on', m === 'signup');
+  $('fN').classList.toggle('hide', m === 'login');
+  $('msg').textContent = '';
+}
+$('tL').onclick = () => setMode('login');
+$('tS').onclick = () => setMode('signup');
+document.querySelectorAll('[data-mode]').forEach(a =>
+  a.addEventListener('click', () => setMode(a.dataset.mode)));
+
+const ERR = {
+  'auth/email-already-in-use': 'Account already exists. Log in instead.',
+  'auth/invalid-credential':   'Invalid email or password.',
+  'auth/invalid-email':        'Enter a valid email.',
+  'auth/weak-password':        'Password must be 6+ characters.',
+  'auth/too-many-requests':    'Too many attempts. Try again later.'
+};
+
+/* ---- sign up / log in ---- */
+$('go').onclick = async () => {
+  const email = $('email').value.trim().toLowerCase();
+  const pw = $('pass').value;
+  const name = $('name').value.trim() || email.split('@')[0];
+  $('msg').textContent = '';
+  try {
+    if (mode === 'signup') {
+      const cred = await createUserWithEmailAndPassword(auth, email, pw);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, 'users', cred.user.uid),
+        { name, email, createdAt: serverTimestamp() });
+    } else {
+      await signInWithEmailAndPassword(auth, email, pw);
+    }
+  } catch (e) {
+    $('msg').textContent = ERR[e.code] || 'Something went wrong. Try again.';
+  }
+};
+$('out').onclick = () => signOut(auth);
+
+/* ---- show site or dashboard depending on login state ---- */
+onAuthStateChanged(auth, user => {
+  $('site').classList.toggle('hide', !!user);
+  $('app').classList.toggle('hide', !user);
+  scrollTo(0, 0);
+  if (user) loadDash(user);
+});
+
+/* ---- dashboard ---- */
+const MS = ["Complete morning skin routine","Hydrate: finish your water goal",
+  "Train or walk for 30 minutes","Posture check, 3 times today","Sleep before midnight"];
+const MODS = [["Skin Protocol",40],["Grooming Lab",25],["Body & Posture",55],
+  ["Style Engine",15],["Sleep & Nutrition",35],["Mindset",60]];
+
+async function loadDash(user){
+  $('hi').textContent = 'Welcome, ' + (user.displayName || 'explorer');
+  $('date').textContent = new Date().toDateString();
+
+  const today = new Date().toISOString().slice(0, 10);
+  const ref = doc(db, 'users', user.uid, 'days', today);
+  const snap = await getDoc(ref);
+  let done = snap.exists() ? snap.data().done : [];
+
+  function paint(){
+    $('ms').innerHTML = '';
+    MS.forEach((t, i) => {
+      const d = document.createElement('div');
+      const on = done.includes(i);
+      d.className = 'm' + (on ? ' done' : '');
+      d.innerHTML = '<b>' + (on ? '✓' : '') + '</b><span>' + t + '</span>';
+      d.onclick = async () => {
+        done = on ? done.filter(x => x !== i) : [...done, i];
+        paint();
+        await setDoc(ref, { done, updatedAt: serverTimestamp() });
+      };
+      $('ms').appendChild(d);
+    });
+    const p = Math.round(done.length / MS.length * 100);
+    $('pct').textContent = p + '%';
+    $('cnt').textContent = done.length + '/' + MS.length;
+    $('rg').style.strokeDashoffset = 327 - 327 * p / 100;
+  }
   paint();
-  $('mods').innerHTML=MODS.map(function(m){return '<div class="row"><span>'+m[0]+'</span><span>'+m[1]+'%</span></div><div class="bar"><i style="width:'+m[1]+'%"></i></div>'}).join('')}
-show();
+
+  $('mods').innerHTML = MODS.map(m =>
+    '<div class="row"><span>' + m[0] + '</span><span>' + m[1] + '%</span></div>' +
+    '<div class="bar"><i style="width:' + m[1] + '%"></i></div>').join('');
+}
+</script>
 </script>
 </body>
 </html>

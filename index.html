@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASTRA — Looksmaxxing Guide</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#000;--fg:#fff;--dim:#9a9a9a;--line:rgba(255,255,255,.14)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.5;overflow-x:hidden}
+canvas#stars{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+main,nav,footer{position:relative;z-index:1}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 6vw}
+.logo{letter-spacing:.5em;font-weight:700;font-size:15px}
+nav a{color:var(--dim);text-decoration:none;font-size:13px;letter-spacing:.15em;text-transform:uppercase}
+nav a:hover{color:var(--fg)}
+.hero{min-height:82vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 6vw}
+.orb{width:clamp(110px,22vw,190px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0,#d8d8d8 22%,#555 62%,#000 100%);box-shadow:0 0 80px rgba(255,255,255,.35),0 0 200px rgba(255,255,255,.12);margin-bottom:44px;animation:float 7s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-14px)}}
+h1{font-size:clamp(48px,13vw,132px);letter-spacing:.28em;margin:0 0 0 .28em;font-weight:200;text-shadow:0 0 40px rgba(255,255,255,.4)}
+.tag{color:var(--dim);letter-spacing:.35em;text-transform:uppercase;font-size:12px;margin:18px 0 30px}
+p.lead{max-width:540px;color:#cfcfcf;font-size:17px;margin:0 0 36px}
+.btn{display:inline-block;padding:14px 34px;border:1px solid var(--fg);color:var(--fg);text-decoration:none;letter-spacing:.2em;text-transform:uppercase;font-size:13px;border-radius:999px;transition:.25s}
+.btn.solid{background:var(--fg);color:var(--bg)}
+.btn:hover{box-shadow:0 0 30px rgba(255,255,255,.5);transform:translateY(-2px)}
+section{padding:90px 6vw;max-width:1100px;margin:0 auto}
+h2{font-weight:200;letter-spacing:.25em;text-transform:uppercase;font-size:clamp(22px,4vw,34px);text-align:center;margin:0 0 50px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.card{border:1px solid var(--line);border-radius:18px;padding:28px;background:rgba(255,255,255,.03);backdrop-filter:blur(6px);transition:.3s}
+.card:hover{border-color:var(--fg);box-shadow:0 0 30px rgba(255,255,255,.12);transform:translateY(-4px)}
+.card .ic{font-size:26px;margin-bottom:14px}
+.card h3{margin:0 0 8px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;font-size:14px}
+.card p{margin:0;color:var(--dim);font-size:14.5px}
+.steps{counter-reset:s;display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.step{border-top:1px solid var(--line);padding-top:20px}
+.step:before{counter-increment:s;content:"0" counter(s);font-size:44px;font-weight:200;display:block;margin-bottom:6px;text-shadow:0 0 20px rgba(255,255,255,.4)}
+.step h3{margin:0 0 6px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;font-size:14px}
+.step p{margin:0;color:var(--dim);font-size:14.5px}
+.cta{text-align:center;border:1px solid var(--line);border-radius:28px;background:radial-gradient(ellipse at 50% 0,rgba(255,255,255,.12),transparent 70%);padding:70px 6vw}
+.cta p{color:var(--dim);margin:0 0 28px}
+footer{text-align:center;color:#666;font-size:12px;letter-spacing:.2em;padding:40px 6vw}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<nav><div class="logo">ASTRA</div><a href="#features">Features</a></nav>
+<main>
+<div class="hero">
+  <div class="orb"></div>
+  <h1>ASTRA</h1>
+  <div class="tag">The Looksmaxxing Guide</div>
+  <p class="lead">Your personal map to a sharper, more confident you. Skin, grooming, fitness and style — guided, tracked and refined.</p>
+  <a class="btn solid" href="#cta">Get Early Access</a>
+</div>
+
+<section id="features">
+  <h2>Navigate Your Glow-Up</h2>
+  <div class="grid">
+    <div class="card"><div class="ic">✦</div><h3>Skincare</h3><p>Build a routine that fits your skin type, with simple daily steps and progress tracking.</p></div>
+    <div class="card"><div class="ic">☾</div><h3>Grooming</h3><p>Haircut, beard and brow guidance matched to your face shape.</p></div>
+    <div class="card"><div class="ic">◉</div><h3>Fitness & Posture</h3><p>Training and posture plans for a stronger, more balanced frame.</p></div>
+    <div class="card"><div class="ic">❂</div><h3>Style</h3><p>Colors and fits that work with your features, from capsule wardrobes to details.</p></div>
+    <div class="card"><div class="ic">☄</div><h3>Sleep & Habits</h3><p>The unglamorous basics — sleep, hydration and nutrition — that move the needle most.</p></div>
+    <div class="card"><div class="ic">✧</div><h3>Progress Log</h3><p>Photo check-ins and streaks so you can see real change over time.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>How It Works</h2>
+  <div class="steps">
+    <div class="step"><h3>Scan</h3><p>Tell ASTRA about your goals, skin and routine.</p></div>
+    <div class="step"><h3>Plan</h3><p>Get a personalized, prioritized roadmap.</p></div>
+    <div class="step"><h3>Ascend</h3><p>Follow daily missions and watch your progress compound.</p></div>
+  </div>
+</section>
+
+<section id="cta">
+  <div class="cta">
+    <h2 style="margin-bottom:16px">Reach For The Stars</h2>
+    <p>Join the waitlist and be first to launch with ASTRA.</p>
+    <a class="btn" href="#">Join The Waitlist</a>
+  </div>
+</section>
+</main>
+<footer>© ASTRA · AD ASTRA PER ASPERA</footer>
+
+<script>
+(function(){
+  var c=document.getElementById('stars'),x=c.getContext('2d'),S=[],W,H;
+  function init(){
+    W=c.width=innerWidth;H=c.height=innerHeight;S=[];
+    var n=Math.min(220,Math.floor(W*H/6000));
+    for(var i=0;i<n;i++)S.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.3+.2,v:Math.random()*.25+.03,t:Math.random()*6.28});
+  }
+  function draw(){
+    x.clearRect(0,0,W,H);
+    for(var i=0;i<S.length;i++){
+      var s=S[i];s.t+=.02;s.y+=s.v;if(s.y>H){s.y=0;s.x=Math.random()*W}
+      x.globalAlpha=.4+.6*Math.abs(Math.sin(s.t));
+      x.fillStyle='#fff';x.beginPath();x.arc(s.x,s.y,s.r,0,6.283);x.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  addEventListener('resize',init);init();draw();
+})();
+</script>
+</body>
+</html>

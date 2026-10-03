@@ -97,10 +97,44 @@ footer{text-align:center;padding:40px 6vw 60px;color:#555;font-size:11px;letter-
 .m.done span{color:var(--dim);text-decoration:line-through}
 @media(max-width:600px){.nr .ghost{display:none}.lead{font-size:16px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+#shoot{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#boot{position:fixed;inset:0;background:#000;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;animation:bo .7s ease 2s forwards}
+#boot img{width:96px;border-radius:50%;filter:drop-shadow(0 0 30px #fff);animation:fl 3s ease-in-out infinite}
+.bb{width:220px;height:2px;background:var(--line)}
+.bb i{display:block;height:100%;width:0;background:#fff;box-shadow:0 0 12px #fff;animation:bf 1.9s ease forwards}
+@keyframes bf{to{width:100%}}
+@keyframes bo{to{opacity:0;visibility:hidden}}
+#prog{position:fixed;top:0;left:0;height:2px;width:0;background:#fff;box-shadow:0 0 12px #fff;z-index:60}
+#cur{position:fixed;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border:1px solid #fff;border-radius:50%;pointer-events:none;z-index:60;mix-blend-mode:difference;opacity:0;transition:width .25s,height .25s,margin .25s,opacity .3s}
+#cur.h{width:64px;height:64px;margin:-32px 0 0 -32px;background:#fff}
+@media(pointer:coarse){#cur{display:none}}
+.hud{position:absolute;font-family:var(--mono);font-size:10px;letter-spacing:.25em;color:var(--dim);line-height:1.8;z-index:3}
+.hud.tl{top:96px;left:5vw}.hud.tr{top:96px;right:5vw;text-align:right}
+.hud.bl{bottom:64px;left:5vw}.hud.br{bottom:64px;right:5vw;text-align:right}
+.hud:before{content:"";display:block;width:26px;height:1px;background:#fff;margin-bottom:8px;box-shadow:0 0 8px #fff}
+.hud.tr:before,.hud.br:before{margin-left:auto}
+@media(max-width:700px){.hud{display:none}}
+.emblem{transition:transform .2s ease-out;transform-style:preserve-3d}
+.sweep{position:absolute;inset:-42%;border-radius:50%;text-decoration:none;background:conic-gradient(from 0deg,transparent 0 280deg,rgba(255,255,255,.25) 360deg);-webkit-mask:radial-gradient(circle,transparent 33%,#000 34%);mask:radial-gradient(circle,transparent 33%,#000 34%);animation:spin 6s linear infinite;z-index:1}
+.hero:after{content:"";position:absolute;width:140vmin;height:140vmin;left:50%;top:48%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,255,255,.1),transparent 60%);z-index:-1;pointer-events:none}
+.tick{overflow:hidden;border-block:1px solid var(--line);padding:16px 0;background:rgba(255,255,255,.03);backdrop-filter:blur(4px)}
+.track{display:flex;width:max-content;animation:mq 26s linear infinite}
+.track span{font-family:var(--mono);letter-spacing:.5em;font-size:13px;white-space:pre;color:#cfcfcf;text-shadow:0 0 14px rgba(255,255,255,.5)}
+@keyframes mq{to{transform:translateX(-50%)}}
+.mf{font-size:clamp(24px,4.4vw,46px);font-weight:200;line-height:1.4;max-width:920px;margin:34px auto 80px;text-align:center}
+.mf span{color:#2e2e2e;transition:color .4s,text-shadow .4s}
+.mf span.on{color:#fff;text-shadow:0 0 22px rgba(255,255,255,.65)}
+@property --a{syntax:'<angle>';initial-value:0deg;inherits:false}
+@keyframes rot{to{--a:360deg}}
+.auth{border:1px solid transparent;background:linear-gradient(rgba(0,0,0,.88),rgba(0,0,0,.88)) padding-box,conic-gradient(from var(--a),transparent 0,transparent 55%,#fff 85%,transparent 100%) border-box;animation:rot 4s linear infinite;box-shadow:0 0 120px rgba(255,255,255,.12)}
+#why{padding-bottom:40px}
 </style>
 </head>
 <body>
-<canvas id="stars"></canvas><div id="glow"></div>
+<div id="boot"><img src="astra-icon.png" alt=""><div class="mono">ASTRA // INITIALIZING</div><div class="bb"><i></i></div></div>
+<div id="prog"></div><div id="cur"></div>
+<canvas id="stars"></canvas><canvas id="shoot"></canvas><div id="glow"></div>
 
 <!-- ========== PUBLIC SITE ========== -->
 <div id="site" class="view">
@@ -111,45 +145,28 @@ footer{text-align:center;padding:40px 6vw 60px;color:#555;font-size:11px;letter-
 
 <header class="hero" id="top">
   <div class="floor"></div>
-  <div class="emblem"><i></i><i></i><i></i><img src="astra-icon.png" alt="ASTRA emblem"></div>
+  <div class="hud tl">SYS // ONLINE<br>ASTRA-OS v1.0</div>
+  <div class="hud tr" id="clk">--:--:--</div>
+  <div class="hud bl" id="crd">LAT 00.0000<br>LNG 00.0000</div>
+  <div class="hud br">SIGNAL ▮▮▮▮▯<br>ENCRYPTED</div>
+  <div class="emblem"><i></i><i></i><i></i><img src="astra-icon.png" alt="ASTRA emblem"><u class="sweep"></u></div>
   <h1 class="glitch" data-t="ASTRA">ASTRA</h1>
   <div class="sub" id="type"></div>
   <p class="lead">The guide that improves you — your face, your body, your habits, your confidence. Not as a promise. As a system you run every day.</p>
   <div class="cta"><a class="btn solid" href="#access" data-mode="signup">Begin your ascent</a><a class="btn" href="#why">Why ASTRA</a></div>
   <span class="scroll mono">Scroll ↓</span>
 </header>
+<div class="tick"><div class="track"><span>DISCIPLINE ✦ CONFIDENCE ✦ PRESENCE ✦ HABITS ✦ GLOW-UP ✦ ASCEND ✦ </span><span>DISCIPLINE ✦ CONFIDENCE ✦ PRESENCE ✦ HABITS ✦ GLOW-UP ✦ ASCEND ✦ </span></div></div>
 
 <section id="why">
   <div class="mono rv" style="text-align:center">// Transmission 001</div>
   <h2 class="rv">This app will make you better.</h2>
-  <p class="center rv">Looking your best is just one outcome. ASTRA is built to improve you as a person: more discipline, sharper habits, stronger self-belief. Small daily upgrades compound until the person in the mirror is someone you're proud of.</p>
+  <p class="mf" id="mf">Looking your best is just one outcome. ASTRA is built to improve you as a person: more discipline, sharper habits, stronger self-belief. Small daily upgrades compound until the person in the mirror is someone you're proud of.</p>
   <div class="stats rv">
     <div><b data-n="6">0</b><span class="mono">Core modules</span></div>
     <div><b data-n="30">0</b><span class="mono">Day ascent plan</span></div>
     <div><b data-n="100" data-s="%">0</b><span class="mono">Personalized</span></div>
     <div><b data-n="1">0</b><span class="mono">You. Upgraded.</span></div>
-  </div>
-</section>
-
-<section id="features">
-  <h2 class="rv">Your upgrade stack</h2>
-  <p class="center rv">Six modules working together. Each one builds the next.</p>
-  <div class="grid">
-    <div class="card rv"><div class="n">01 / SKIN</div><h3>Skin Protocol</h3><p>A routine built for your skin type, with simple steps you can actually keep.</p></div>
-    <div class="card rv"><div class="n">02 / GROOM</div><h3>Grooming Lab</h3><p>Hair, brows and facial hair matched to your face structure.</p></div>
-    <div class="card rv"><div class="n">03 / BODY</div><h3>Body & Posture</h3><p>Training and posture plans that build presence and strength.</p></div>
-    <div class="card rv"><div class="n">04 / STYLE</div><h3>Style Engine</h3><p>Colors, fits and details that work with your features.</p></div>
-    <div class="card rv"><div class="n">05 / BASE</div><h3>Sleep & Nutrition</h3><p>The fundamentals that quietly drive everything else.</p></div>
-    <div class="card rv"><div class="n">06 / MIND</div><h3>Mindset & Discipline</h3><p>Daily missions, streaks and confidence work that make change stick.</p></div>
-  </div>
-</section>
-
-<section>
-  <h2 class="rv">Three steps to orbit</h2>
-  <div class="grid">
-    <div class="card rv"><div class="n">STEP 01</div><h3>Scan</h3><p>Tell ASTRA your goals, routine and starting point.</p></div>
-    <div class="card rv"><div class="n">STEP 02</div><h3>Plan</h3><p>Receive a prioritized roadmap, built around you.</p></div>
-    <div class="card rv"><div class="n">STEP 03</div><h3>Ascend</h3><p>Complete daily missions and watch your progress compound.</p></div>
   </div>
 </section>
 
@@ -209,6 +226,33 @@ var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isInte
   e.target.querySelectorAll('[data-n]').forEach(function(b){var n=+b.dataset.n,k=0,s=b.dataset.s||'';var iv=setInterval(function(){k+=Math.max(1,n/40);if(k>=n){k=n;clearInterval(iv)}b.textContent=Math.round(k)+s},35)});
   io.unobserve(e.target)})},{threshold:.2});
 document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
+/* ---------- progress, cursor, tilt, clock, manifesto, shooting stars ---------- */
+(function(){
+  var pg=document.getElementById('prog'),cu=document.getElementById('cur'),em=document.querySelector('.emblem'),
+      mf=document.getElementById('mf'),cx=0,cy=0,tx=0,ty=0;
+  if(mf){var w=mf.textContent.trim().split(/\s+/);mf.innerHTML=w.map(function(t){return '<span>'+t+'</span>'}).join(' ')}
+  function sc(){var d=document.documentElement,m=d.scrollHeight-innerHeight;pg.style.width=(m>0?scrollY/m*100:0)+'%';
+    if(mf){var r=mf.getBoundingClientRect(),p=Math.min(1,Math.max(0,(innerHeight*.85-r.top)/(r.height+innerHeight*.3))),s=mf.children,n=Math.floor(p*s.length);
+      for(var i=0;i<s.length;i++)s[i].classList.toggle('on',i<n)}}
+  addEventListener('scroll',sc);sc();
+  addEventListener('mousemove',function(e){tx=e.clientX;ty=e.clientY;cu.style.opacity=1;
+    em.style.transform='perspective(800px) rotateX('+((e.clientY/innerHeight-.5)*-14)+'deg) rotateY('+((e.clientX/innerWidth-.5)*14)+'deg)';
+    cu.classList.toggle('h',!!e.target.closest('a,button'))});
+  (function f(){cx+=(tx-cx)*.18;cy+=(ty-cy)*.18;cu.style.transform='translate('+cx+'px,'+cy+'px)';requestAnimationFrame(f)})();
+  var ck=document.getElementById('clk'),cd=document.getElementById('crd');
+  function tk(){ck.innerHTML='LOCAL TIME<br>'+new Date().toLocaleTimeString([], {hour12:false})}
+  tk();setInterval(tk,1000);
+  setInterval(function(){cd.innerHTML='LAT '+(50.8503+Math.random()*.0009).toFixed(4)+'<br>LNG '+(4.3517+Math.random()*.0009).toFixed(4)},1300);
+  var c=document.getElementById('shoot'),x=c.getContext('2d'),L=[];
+  function rs(){c.width=innerWidth;c.height=innerHeight}rs();addEventListener('resize',rs);
+  (function d(){x.clearRect(0,0,c.width,c.height);
+    if(Math.random()<.012)L.push({x:Math.random()*c.width*.9,y:Math.random()*c.height*.5,vx:9+Math.random()*6,vy:4+Math.random()*3,a:1});
+    L=L.filter(function(s){var g=x.createLinearGradient(s.x,s.y,s.x-s.vx*9,s.y-s.vy*9);g.addColorStop(0,'rgba(255,255,255,'+s.a+')');g.addColorStop(1,'rgba(255,255,255,0)');
+      x.strokeStyle=g;x.lineWidth=1.6;x.beginPath();x.moveTo(s.x,s.y);x.lineTo(s.x-s.vx*9,s.y-s.vy*9);x.stroke();
+      s.x+=s.vx;s.y+=s.vy;s.a-=.012;return s.a>0});
+    requestAnimationFrame(d)})();
+})();
+
 </script>
 
 <script type="module">

@@ -129,6 +129,57 @@ footer{text-align:center;padding:40px 6vw 60px;color:#555;font-size:11px;letter-
 @keyframes rot{to{--a:360deg}}
 .auth{border:1px solid transparent;background:linear-gradient(rgba(0,0,0,.88),rgba(0,0,0,.88)) padding-box,conic-gradient(from var(--a),transparent 0,transparent 55%,#fff 85%,transparent 100%) border-box;animation:rot 4s linear infinite;box-shadow:0 0 120px rgba(255,255,255,.12)}
 #why{padding-bottom:40px}
+
+/* ONBOARDING */
+.onb{max-width:1100px;margin:0 auto;padding:110px 6vw 60px}
+.onb h2{margin-bottom:12px}
+.ob{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;align-items:start}
+@media(max-width:860px){.ob{grid-template-columns:1fr}}
+.sb{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 auto 26px;max-width:560px}
+.sb i{height:3px;background:var(--line);transition:.5s}
+.sb i.on{background:#fff;box-shadow:0 0 12px #fff}
+.glowb{border:1px solid transparent;background:linear-gradient(rgba(0,0,0,.88),rgba(0,0,0,.88)) padding-box,conic-gradient(from var(--a),transparent 0,transparent 55%,#fff 85%,transparent 100%) border-box;animation:rot 4s linear infinite;padding:34px;box-shadow:0 0 100px rgba(255,255,255,.1)}
+.pane{display:none}
+.pane.on{display:block;animation:pin .5s}
+@keyframes pin{from{opacity:0;transform:translateX(24px)}}
+.ph{font-weight:200;font-size:28px;letter-spacing:.1em;text-transform:uppercase;margin:8px 0 6px}
+.pp{color:var(--dim);margin:0 0 24px;font-size:15px}
+.gcards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g,.o{cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.03);transition:.3s;position:relative}
+.g{padding:30px 14px;text-align:center;letter-spacing:.3em;text-transform:uppercase;font-size:13px}
+.g svg{width:84px;height:84px;stroke:#fff;fill:none;stroke-width:1.2;stroke-linecap:round;display:block;margin:0 auto 14px;transition:.3s;filter:drop-shadow(0 0 8px rgba(255,255,255,.6))}
+.o{padding:16px 18px}
+.o b{display:block;font-weight:500;letter-spacing:.12em;text-transform:uppercase;font-size:13px}
+.o span{color:var(--dim);font-size:12.5px}
+.g:hover,.o:hover{border-color:#fff;box-shadow:0 0 28px rgba(255,255,255,.2)}
+.g.on,.o.on{background:#fff;color:#000;box-shadow:0 0 40px rgba(255,255,255,.45)}
+.g.on svg{stroke:#000;filter:none}.o.on span{color:#333}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
+.chip{padding:11px 18px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;transition:.25s}
+.chip:hover{border-color:#fff}
+.chip.on{background:#fff;color:#000;box-shadow:0 0 22px rgba(255,255,255,.5)}
+.fl{display:flex;justify-content:space-between;align-items:baseline}
+.big{font-size:38px;font-weight:200;text-shadow:0 0 20px rgba(255,255,255,.5)}
+input[type=range]{-webkit-appearance:none;appearance:none;padding:0;height:2px;background:var(--line);border:0;margin:14px 0 22px}
+input[type=range]:focus{box-shadow:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 0 16px #fff;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 16px #fff;cursor:pointer}
+#age{font-size:30px;font-weight:200;text-align:center;letter-spacing:.2em;margin-bottom:22px}
+.onav{display:flex;justify-content:space-between;gap:12px;margin-top:10px}
+.onav .btn{width:auto;min-width:130px}
+.hudp .n{margin:16px 0 12px}
+.scanbox{position:relative;overflow:hidden;width:120px;height:120px;margin:4px auto 0;border:1px solid var(--line);border-radius:50%}
+.scanbox img{width:100%;display:block}
+.scanbox:after{content:"";position:absolute;left:0;right:0;height:2px;background:#fff;box-shadow:0 0 14px 2px #fff;animation:scan 3s ease-in-out infinite}
+@keyframes scan{0%,100%{top:0}50%{top:100%}}
+.hr{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.hr span:first-child{color:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.2em}
+.hr span:last-child{text-align:right}
+.hr .e{color:#555}
+#sync{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px}
+#sync .emblem{width:150px;margin:0}
+#sl{min-height:20px}
 </style>
 </head>
 <body>
@@ -185,6 +236,75 @@ footer{text-align:center;padding:40px 6vw 60px;color:#555;font-size:11px;letter-
   </div>
 </section>
 <footer>ASTRA · AD ASTRA PER ASPERA</footer>
+</div>
+
+<!-- ========== ONBOARDING ========== -->
+<div id="onb" class="view hide">
+<nav>
+  <a class="brand" href="#"><img src="astra-icon.png" alt="">ASTRA</a>
+  <div class="nr"><button class="btn ghost" id="out2">Log out</button></div>
+</nav>
+<main class="onb">
+  <div class="mono" style="text-align:center">// Subject calibration</div>
+  <h2>Calibrate ASTRA</h2>
+  <p class="center" style="margin-bottom:30px">A few details so ASTRA can build your dashboard around you. You only do this once.</p>
+  <div class="sb" id="sb"><i></i><i></i><i></i><i></i></div>
+  <div class="ob">
+    <div class="glowb">
+      <div class="pane" data-s="0">
+        <div class="mono">Step 01 / 04 // Identity</div>
+        <h3 class="ph">Select your gender</h3><p class="pp">This shapes your dashboard and your recommendations.</p>
+        <div class="gcards" id="gc">
+          <div class="g" data-v="male"><svg viewBox="0 0 24 24"><circle cx="10" cy="14" r="6"/><path d="M14.5 9.5 20 4M14 4h6v6"/></svg>Male</div>
+          <div class="g" data-v="female"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M12 15v7M9 19h6"/></svg>Female</div>
+        </div>
+      </div>
+      <div class="pane" data-s="1">
+        <div class="mono">Step 02 / 04 // Body data</div>
+        <h3 class="ph">Your measurements</h3><p class="pp">Used to tailor training and nutrition. Stored privately on your account.</p>
+        <div class="tabs" style="margin-top:0"><button id="uM" class="on">Metric</button><button id="uI">Imperial</button></div>
+        <label><span class="mono">Age</span><input id="age" type="number" min="16" max="99" inputmode="numeric" placeholder="--"></label>
+        <div class="fl"><span class="mono">Height</span><span class="big" id="vH"></span></div><input id="rH" type="range" min="140" max="220" value="175">
+        <div class="fl"><span class="mono">Weight</span><span class="big" id="vW"></span></div><input id="rW" type="range" min="35" max="200" value="70">
+        <div class="fl"><span class="mono">Shoe size (EU)</span><span class="big" id="vS"></span></div><input id="rS" type="range" min="34" max="50" value="42">
+      </div>
+      <div class="pane" data-s="2">
+        <div class="mono">Step 03 / 04 // Lifestyle</div>
+        <h3 class="ph">Your daily rhythm</h3><p class="pp">Be honest. ASTRA builds from where you actually are.</p>
+        <div class="opts" id="act">
+          <div class="o" data-v="Mostly seated"><b>Mostly seated</b><span>Desk or study life</span></div>
+          <div class="o" data-v="Lightly active"><b>Lightly active</b><span>Some walking</span></div>
+          <div class="o" data-v="Very active"><b>Very active</b><span>On my feet, training</span></div>
+          <div class="o" data-v="Athlete"><b>Athlete</b><span>Structured, intense</span></div>
+        </div>
+        <div class="mono" style="margin-bottom:10px">Training days per week</div>
+        <div class="chips" id="days"><div class="chip" data-v="0">0</div><div class="chip" data-v="1">1</div><div class="chip" data-v="2">2</div><div class="chip" data-v="3">3</div><div class="chip" data-v="4">4</div><div class="chip" data-v="5">5</div><div class="chip" data-v="6">6</div><div class="chip" data-v="7">7</div></div>
+        <div class="fl"><span class="mono">Average sleep</span><span class="big" id="vSl"></span></div><input id="rSl" type="range" min="4" max="10" step="0.5" value="7">
+      </div>
+      <div class="pane" data-s="3">
+        <div class="mono">Step 04 / 04 // Focus</div>
+        <h3 class="ph">What do you want to upgrade?</h3><p class="pp">Pick one or more. You can change this later.</p>
+        <div class="chips" id="goals">
+          <div class="chip" data-v="Build muscle">Build muscle</div><div class="chip" data-v="Lose fat">Lose fat</div><div class="chip" data-v="Posture">Posture</div>
+          <div class="chip" data-v="Skincare">Skincare</div><div class="chip" data-v="Grooming">Grooming</div><div class="chip" data-v="Style">Style</div>
+          <div class="chip" data-v="Confidence">Confidence</div><div class="chip" data-v="Discipline">Discipline</div><div class="chip" data-v="Sleep & recovery">Sleep &amp; recovery</div>
+        </div>
+      </div>
+      <div class="msg" id="omsg"></div>
+      <div class="onav"><button class="btn ghost" id="oB">Back</button><button class="btn solid" id="oN">Continue</button></div>
+    </div>
+    <aside class="card hudp">
+      <div class="scanbox"><img src="astra-icon.png" alt=""></div>
+      <div class="n" style="text-align:center">SUBJECT PROFILE // LIVE</div>
+      <div id="hrows"></div>
+    </aside>
+  </div>
+</main>
+<div id="sync" class="hide">
+  <div class="emblem"><i></i><i></i><img src="astra-icon.png" alt=""><u class="sweep"></u></div>
+  <div class="mono" id="sl"></div>
+  <div class="bb"><i id="sf" style="animation:none"></i></div>
+</div>
 </div>
 
 <!-- ========== DASHBOARD ========== -->
@@ -265,13 +385,12 @@ import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
 
 /* PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps) */
 const app = initializeApp({
-apiKey: "AIzaSyC6KYU2DlrP482ASiHOP-A4QRQxFtKO2Ao",
-    authDomain: "astra-looksmaxxingguide.firebaseapp.com",
-    projectId: "astra-looksmaxxingguide",
-    storageBucket: "astra-looksmaxxingguide.firebasestorage.app",
-    messagingSenderId: "251264568545",
-    appId: "1:251264568545:web:cf96babf29c90e06da7ba0",
-    measurementId: "G-GS7297Z79R"
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
 });
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -318,12 +437,93 @@ $('go').onclick = async () => {
 };
 $('out').onclick = () => signOut(auth);
 
-onAuthStateChanged(auth, user => {
-  $('site').classList.toggle('hide', !!user);
-  $('app').classList.toggle('hide', !user);
-  scrollTo(0, 0);
-  if (user) loadDash(user);
+function view(v){ ['site','onb','app'].forEach(k => $(k).classList.toggle('hide', k !== v)); scrollTo(0, 0); }
+let cu = null;
+onAuthStateChanged(auth, async user => {
+  cu = user;
+  if (!user) { view('site'); return; }
+  let onboarded = true;
+  try { const s = await getDoc(doc(db, 'users', user.uid)); onboarded = !!(s.exists() && s.data().onboarded); }
+  catch (e) { console.error(e); }
+  if (onboarded) { view('app'); loadDash(user); }
+  else { resetWiz(); view('onb'); }
 });
+$('out2').onclick = () => signOut(auth);
+
+/* ---- first-time onboarding wizard ---- */
+let S, step = 0;
+const cmIn = c => { const t = Math.round(c / 2.54); return Math.floor(t / 12) + '\u2032 ' + (t % 12) + '\u2033'; };
+function resetWiz(){
+  S = { gender:null, age:'', unit:'metric', height:175, weight:70, shoe:42, activity:null, days:null, sleep:7, goals:[] };
+  $('age').value = ''; $('rH').value = 175; $('rW').value = 70; $('rS').value = 42; $('rSl').value = 7;
+  document.querySelectorAll('#onb .on').forEach(e => { if (e.closest('.pane')) e.classList.remove('on'); });
+  setUnit('metric'); go(0);
+}
+function fmt(){
+  const m = S.unit === 'metric';
+  return { h: m ? S.height + ' cm' : cmIn(S.height), w: m ? S.weight + ' kg' : Math.round(S.weight * 2.2046) + ' lb' };
+}
+function hud(){
+  const f = fmt(), R = [
+    ['Gender', S.gender], ['Age', S.age], ['Height', f.h], ['Weight', f.w], ['Shoe', 'EU ' + S.shoe],
+    ['Activity', S.activity], ['Training', S.days === null ? '' : S.days + ' days / wk'], ['Sleep', S.sleep + ' h'],
+    ['Focus', S.goals.join(', ')]];
+  $('hrows').innerHTML = R.map(r => '<div class="hr"><span>' + r[0] + '</span><span class="' + (r[1] ? '' : 'e') + '">' + (r[1] || '\u2014') + '</span></div>').join('');
+  const g = fmt(); $('vH').textContent = g.h; $('vW').textContent = g.w; $('vS').textContent = S.shoe; $('vSl').textContent = S.sleep + ' h';
+}
+function setUnit(u){ S.unit = u; $('uM').classList.toggle('on', u === 'metric'); $('uI').classList.toggle('on', u === 'imperial'); hud(); }
+function go(n){
+  step = n;
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', +p.dataset.s === n));
+  document.querySelectorAll('#sb i').forEach((b, i) => b.classList.toggle('on', i <= n));
+  $('oB').style.visibility = n ? 'visible' : 'hidden';
+  $('oN').textContent = n === 3 ? 'Initialize ASTRA' : 'Continue';
+  $('omsg').textContent = ''; hud();
+}
+function check(n){
+  if (n === 0 && !S.gender) return 'Select your gender to continue.';
+  if (n === 1 && !(S.age >= 16 && S.age <= 99)) return 'Enter your age (16 or older).';
+  if (n === 2 && (!S.activity || S.days === null)) return 'Choose your activity level and training days.';
+  if (n === 3 && !S.goals.length) return 'Pick at least one focus area.';
+  return '';
+}
+const pick = (sel, fn) => document.querySelectorAll(sel).forEach(e => e.onclick = () => fn(e));
+pick('#gc .g', e => { S.gender = e.dataset.v; document.querySelectorAll('#gc .g').forEach(x => x.classList.toggle('on', x === e)); hud(); });
+pick('#act .o', e => { S.activity = e.dataset.v; document.querySelectorAll('#act .o').forEach(x => x.classList.toggle('on', x === e)); hud(); });
+pick('#days .chip', e => { S.days = +e.dataset.v; document.querySelectorAll('#days .chip').forEach(x => x.classList.toggle('on', x === e)); hud(); });
+pick('#goals .chip', e => { e.classList.toggle('on'); S.goals = [...document.querySelectorAll('#goals .chip.on')].map(x => x.dataset.v); hud(); });
+$('uM').onclick = () => setUnit('metric'); $('uI').onclick = () => setUnit('imperial');
+$('age').oninput = e => { S.age = +e.target.value || ''; hud(); };
+$('rH').oninput = e => { S.height = +e.target.value; hud(); };
+$('rW').oninput = e => { S.weight = +e.target.value; hud(); };
+$('rS').oninput = e => { S.shoe = +e.target.value; hud(); };
+$('rSl').oninput = e => { S.sleep = +e.target.value; hud(); };
+$('oB').onclick = () => go(step - 1);
+$('oN').onclick = () => {
+  const err = check(step); $('omsg').textContent = err;
+  if (err) return;
+  step < 3 ? go(step + 1) : finish();
+};
+async function finish(){
+  $('sync').classList.remove('hide');
+  const L = ['SYNCING PROFILE', 'CALIBRATING DASHBOARD', 'ACCESS GRANTED'], sf = $('sf');
+  sf.style.animation = 'none'; sf.style.width = '0'; void sf.offsetWidth; sf.style.animation = 'bf 2.6s ease forwards';
+  L.forEach((t, i) => setTimeout(() => $('sl').textContent = t, i * 900));
+  const profile = { gender:S.gender, age:S.age, units:S.unit, heightCm:S.height, weightKg:S.weight, shoeEU:S.shoe,
+    activity:S.activity, trainingDays:S.days, sleepHours:S.sleep, goals:S.goals };
+  try {
+    await Promise.all([
+      setDoc(doc(db, 'users', cu.uid), { onboarded:true, onboardedAt:serverTimestamp(), profile }, { merge:true }),
+      new Promise(r => setTimeout(r, 2700))]);
+    view('app'); loadDash(cu);
+  } catch (e) {
+    console.error(e);
+    $('sync').classList.add('hide');
+    $('omsg').textContent = 'Could not save. Check your connection and try again.';
+  }
+  $('sync').classList.add('hide');
+}
+resetWiz();
 
 const MS = ["Complete morning skin routine","Hydrate: finish your water goal",
   "Train or walk for 30 minutes","Posture check, 3 times today","Sleep before midnight"];

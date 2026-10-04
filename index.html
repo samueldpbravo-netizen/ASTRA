@@ -2,9 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ASTRA">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>ASTRA</title>
-<link rel="icon" href="favicon.png">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -243,11 +250,128 @@ input[type=date]{color-scheme:dark}
 @keyframes eq{50%{height:12px}}
 .emblem img,#boot img,.brand img,.scanbox img{border-radius:0!important}
 .scanbox{background:#000}
+
+/* ===== v4: no select/zoom, app shell, profile, messages ===== */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+*{-webkit-tap-highlight-color:transparent}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea{-webkit-user-select:text;user-select:text;font-size:16px}
+img{-webkit-user-drag:none;user-drag:none}
+textarea{width:100%;padding:14px 16px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:#fff;font:inherit;font-size:16px;outline:0;resize:none;transition:.25s}
+textarea:focus{border-color:#fff;box-shadow:0 0 22px rgba(255,255,255,.25)}
+.dim{color:var(--dim);font-size:13px}
+.btn.sm{padding:9px 18px;font-size:11px}
+.btn .ico{display:inline-grid;vertical-align:middle;margin-right:10px}
+.ico svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.card.static:hover{transform:none;background:rgba(255,255,255,.035);box-shadow:none}
+body[data-v=app] #snd{bottom:auto;top:calc(14px + env(safe-area-inset-top));right:16px}
+/* shell */
+.side{position:fixed;left:0;top:0;bottom:0;width:84px;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-right:1px solid var(--line);background:linear-gradient(90deg,rgba(0,0,0,.88),rgba(0,0,0,.45));backdrop-filter:blur(10px)}
+.sbrand{position:absolute;top:calc(18px + env(safe-area-inset-top));width:40px;height:40px}
+.tb{position:relative;width:54px;height:54px;border:1px solid transparent;border-radius:16px;background:none;color:var(--dim);cursor:pointer;display:grid;place-items:center;transition:.25s}
+.tb svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tb:hover{color:#fff;border-color:var(--line)}
+.tb.on{color:#000;background:#fff;box-shadow:0 0 28px rgba(255,255,255,.55)}
+.tb:after{content:attr(data-l);position:absolute;left:66px;top:50%;transform:translateY(-50%) translateX(-6px);opacity:0;pointer-events:none;white-space:nowrap;font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;background:#000;border:1px solid var(--line);padding:6px 10px;color:#fff;transition:.2s}
+.tb:hover:after{opacity:1;transform:translateY(-50%)}
+.tb em{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#fff;color:#000;font-style:normal;font-size:11px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 14px #fff;animation:bp 1.8s ease-in-out infinite}
+.tb.on em{background:#000;color:#fff;border:1px solid #fff}
+.pages{margin-left:84px;padding:70px 5vw 60px}
+.pg{display:none;max-width:980px;margin:0 auto}
+.pg.on{display:block;animation:pin .4s}
+.lo{text-align:center;margin-top:26px}
+@media(max-width:760px){
+  .side{top:auto;left:50%;right:auto;bottom:calc(14px + env(safe-area-inset-bottom));width:auto;transform:translateX(-50%);flex-direction:row;gap:10px;padding:9px 14px;border:1px solid var(--line);border-radius:28px;background:rgba(0,0,0,.82)}
+  .sbrand,.tb:after{display:none}
+  .pages{margin-left:0;padding:70px 5vw 120px}
+}
+/* profile */
+#pf{display:grid;gap:18px}
+.pcard{position:relative}
+.ptop{display:flex;gap:28px;align-items:center}
+.av{border-radius:50%;overflow:hidden;position:relative;background:radial-gradient(circle at 50% 40%,#1c1c1c,#000);border:1px solid rgba(255,255,255,.5);box-shadow:0 0 30px rgba(255,255,255,.18)}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.av.def img{object-fit:contain;padding:6%}
+.av.lg{width:150px;height:150px;flex:none}
+.av.md{width:48px;height:48px;flex:none}
+.pinfo{min-width:0;flex:1}
+.pinfo h2{text-align:left;margin:4px 0 12px;font-size:clamp(18px,2.8vw,28px);overflow-wrap:anywhere}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+.badge.hi{background:#fff;color:#000;box-shadow:0 0 18px rgba(255,255,255,.4)}
+.bio{color:#cfcfcf;margin:14px 0 18px;max-width:520px;white-space:pre-wrap;overflow-wrap:anywhere}
+.prow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ibtn{width:46px;height:46px;flex:none;border-radius:50%;border:1px solid var(--fg);background:none;color:#fff;display:grid;place-items:center;cursor:pointer;transition:.25s}
+.ibtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ibtn:hover{box-shadow:0 0 24px rgba(255,255,255,.55);background:#fff;color:#000}
+.ebtn{position:absolute;top:16px;right:16px}
+.lpanel{margin-top:18px;border-top:1px solid var(--line);display:grid;gap:8px;padding-top:16px;animation:pin .35s}
+.lrow{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);color:#fff;text-decoration:none;background:rgba(255,255,255,.03);font:inherit;font-size:15px;cursor:pointer;text-align:left;transition:.25s;overflow-wrap:anywhere}
+.lrow:hover{border-color:#fff;box-shadow:0 0 20px rgba(255,255,255,.2)}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.bigt{font-family:var(--disp);font-size:clamp(22px,3.6vw,34px);letter-spacing:.1em;text-shadow:0 0 24px rgba(255,255,255,.5);margin:10px 0 4px}
+.lad{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:18px}
+.lad div{text-align:center;padding:9px 2px;border:1px solid var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.04em}
+.lad b{display:block;font-weight:400}
+.lad span{display:block;color:var(--dim);font-size:8.5px;margin-top:2px}
+.lad .on{background:#fff;color:#000;box-shadow:0 0 18px rgba(255,255,255,.5)}.lad .on span{color:#333}
+.codec{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.code{font-family:var(--mono);font-size:clamp(22px,5vw,36px);letter-spacing:.28em;text-shadow:0 0 20px rgba(255,255,255,.5);cursor:pointer;margin-top:6px}
+@media(max-width:700px){.ptop{flex-direction:column;text-align:center}.pinfo h2{text-align:center}.badges,.prow{justify-content:center}.sg{grid-template-columns:1fr}.bio{margin-left:auto;margin-right:auto}.codec{justify-content:center;text-align:center}}
+/* messages */
+.msgs{display:grid;grid-template-columns:340px 1fr;border:1px solid var(--line);background:rgba(0,0,0,.6);backdrop-filter:blur(10px);height:calc(100vh - 135px);height:calc(100dvh - 135px);min-height:420px}
+.lpane{display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0}
+.lhead{padding:20px;border-bottom:1px solid var(--line)}
+#flist{flex:1;overflow:auto;min-height:0}
+.ladd{padding:14px;border-top:1px solid var(--line)}.ladd .btn{width:100%}
+.frow{display:flex;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center;transition:.2s}
+.frow:hover,.frow.sel{background:rgba(255,255,255,.07)}
+.frow .t{flex:1;min-width:0}
+.frow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+.frow .pv{color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow.un .nm{font-weight:700;color:#fff}.frow.un .pv{color:#ddd;font-weight:600}
+.side2{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tm{font-size:11px;color:var(--dim);font-family:var(--mono)}
+.cnt{min-width:20px;height:20px;border-radius:10px;background:#fff;color:#000;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 6px;box-shadow:0 0 12px #fff}
+.empty{padding:30px 20px;text-align:center;color:var(--dim)}
+.cpane{display:flex;flex-direction:column;min-height:0;min-width:0}
+#cempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.bigico svg{width:64px;height:64px;stroke:#fff;fill:none;stroke-width:1;opacity:.5;filter:drop-shadow(0 0 10px #fff)}
+#cview{display:flex;flex-direction:column;flex:1;min-height:0}
+.chead{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.who{display:flex;align-items:center;gap:12px;cursor:pointer;min-width:0}
+.nm2{font-size:16px;font-weight:500}
+.back{display:none}
+#cbody{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.bub{max-width:min(74%,520px);padding:10px 14px;border:1px solid var(--line);background:rgba(255,255,255,.05);overflow-wrap:anywhere;white-space:pre-wrap;border-radius:16px 16px 16px 4px;align-self:flex-start;animation:pin .25s}
+.bub.me{align-self:flex-end;background:#fff;color:#000;border-radius:16px 16px 4px 16px}
+.meta{font-size:10px;letter-spacing:.06em;font-family:var(--mono);margin-top:4px;opacity:.65;display:flex;gap:10px;justify-content:flex-end}
+.rc.seen{font-weight:700;opacity:1}
+.comp{display:flex;gap:10px;align-items:flex-end;padding:14px;border-top:1px solid var(--line)}
+@media(max-width:860px){
+  .msgs{grid-template-columns:1fr;height:calc(100vh - 210px);height:calc(100dvh - 210px)}
+  .msgs .cpane{display:none}.msgs.open .lpane{display:none}.msgs.open .cpane{display:flex}
+  .back{display:grid}
+}
+/* modals + toast */
+.modal{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px;overflow:auto}
+.modal>.glowb{width:min(520px,100%);max-height:92vh;overflow:auto}
+.eph{display:flex;gap:20px;align-items:center;margin-bottom:22px}
+.eb{display:grid;gap:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#eCnt{font-style:normal;float:right}
+#fbody .sg{grid-template-columns:1fr;margin-top:18px}
+#aCode{text-align:center;letter-spacing:.3em;font-family:var(--mono);font-size:22px}
+#toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;background:#fff;color:#000;padding:10px 20px;border-radius:999px;font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;z-index:95;transition:.3s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1;transform:translateX(-50%)}
+.pg{padding:0;margin:0 auto}
+.pinfo .bio{margin:14px 0 18px}
+.modal>.glowb{padding:28px}
 </style>
 </head>
 <body>
 <div id="boot"><img src="astra-icon.png" alt=""><div class="mono">ASTRA // INITIALIZING</div><div class="bb"><i></i></div></div>
-<div id="prog"></div><div id="cur"></div>
+<div id="prog"></div><div id="cur"></div><div id="toast"></div>
 <button id="snd" class="mono" aria-label="Toggle sound"><span class="eq"><i></i><i></i><i></i><i></i></span><span id="sndt">Sound on</span></button>
 <canvas id="stars"></canvas><canvas id="shoot"></canvas><div id="glow"></div>
 
@@ -384,22 +508,60 @@ input[type=date]{color-scheme:dark}
 </div>
 </div>
 
-<!-- ========== DASHBOARD ========== -->
+<!-- ========== APP (profile / home / messages) ========== -->
 <div id="app" class="view hide">
-<nav>
-  <a class="brand" href="#"><img src="astra-icon.png" alt="">ASTRA</a>
-  <div class="nr"><button class="btn ghost" id="out">Log out</button></div>
+<nav class="side" id="side">
+  <img class="sbrand" src="astra-icon.png" alt="">
+  <button class="tb on" data-t="profile" data-l="Profile" aria-label="Profile"></button>
+  <button class="tb" data-t="home" data-l="Home" aria-label="Home"></button>
+  <button class="tb" data-t="msgs" data-l="Messages" aria-label="Messages"></button>
 </nav>
-<main class="dash">
-  <div class="dh"><div><div class="mono" id="date"></div><h2 id="hi">Welcome</h2></div><div class="mono">Status // Online</div></div>
-  <div class="dg">
-    <div class="card"><div class="n">ASCENT LEVEL</div>
-      <svg class="ring" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="rg" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="327"/><text x="60" y="69" id="pct">0%</text></svg>
-      <div class="row"><span>Today</span><span id="cnt">0/5</span></div></div>
-    <div class="card"><div class="n">DAILY MISSIONS</div><div id="ms" style="margin-top:8px"></div></div>
-    <div class="card"><div class="n">MODULE PROGRESS</div><div id="mods" style="margin-top:14px"></div></div>
-  </div>
+<main class="pages">
+  <section class="pg on" id="pg-profile"><div id="pf"></div><div class="lo"><button class="btn ghost sm" id="out">Log out</button></div></section>
+  <section class="pg" id="pg-home"><div class="card static" style="text-align:center;padding:70px 20px"><img src="astra-icon.png" alt="" style="width:120px;opacity:.9"><div class="mono" style="margin-top:14px">Home // coming next</div></div></section>
+  <section class="pg" id="pg-msgs">
+    <div class="msgs" id="msgs">
+      <div class="lpane">
+        <div class="lhead"><div class="mono">// Comms</div><h3 class="ph" style="margin:6px 0 0">Messages</h3></div>
+        <div id="flist"></div>
+        <div class="ladd"><button class="btn solid" id="addBtn">Add friend</button></div>
+      </div>
+      <div class="cpane">
+        <div id="cempty"><div class="bigico" id="cico"></div><div class="mono">Select a friend to start chatting</div></div>
+        <div id="cview" class="hide">
+          <div class="chead" id="chead"></div>
+          <div id="cbody"></div>
+          <div class="comp"><textarea id="cin" rows="1" maxlength="1000" placeholder="Write a message"></textarea><button class="ibtn" id="csend" aria-label="Send"></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
+
+<div class="modal hide" id="mEdit"><div class="glowb">
+  <div class="mono">// Edit profile</div><h3 class="ph">Your profile</h3>
+  <div class="eph"><div id="ePrev"></div><div class="eb"><button class="btn sm" id="ePick" type="button">Change photo</button><button class="btn ghost sm" id="eRm" type="button">Remove</button><input type="file" id="ePhoto" accept="image/*" class="hide"></div></div>
+  <label><span class="mono">Name</span><input id="eName" maxlength="24" autocomplete="off"></label>
+  <label><span class="mono">Bio <i id="eCnt">0/160</i></span><textarea id="eBio" rows="3" maxlength="160"></textarea></label>
+  <label><span class="mono">Snapchat</span><input id="eSnap" maxlength="40" placeholder="username" autocomplete="off"></label>
+  <label><span class="mono">Instagram</span><input id="eInsta" maxlength="40" placeholder="username" autocomplete="off"></label>
+  <label><span class="mono">Discord</span><input id="eDisc" maxlength="40" placeholder="username" autocomplete="off"></label>
+  <div class="two"><label><span class="mono">Custom label</span><input id="eCL" maxlength="20" placeholder="TikTok" autocomplete="off"></label><label><span class="mono">Link or username</span><input id="eCV" maxlength="100" placeholder="tiktok.com/@you" autocomplete="off"></label></div>
+  <div class="msg" id="eMsg"></div>
+  <div class="onav"><button class="btn ghost" data-close>Cancel</button><button class="btn solid" id="eSave">Save</button></div>
+</div></div>
+
+<div class="modal hide" id="mAdd"><div class="glowb">
+  <div class="mono">// Link up</div><h3 class="ph">Add a friend</h3><p class="pp">Enter their friend code.</p>
+  <label><span class="mono">Friend code</span><input id="aCode" maxlength="12" autocomplete="off" placeholder="ABCD2345"></label>
+  <div class="msg" id="aMsg"></div>
+  <div class="onav"><button class="btn ghost" data-close>Cancel</button><button class="btn solid" id="aGo">Add</button></div>
+</div></div>
+
+<div class="modal hide" id="mFriend"><div class="glowb">
+  <div id="fbody"></div>
+  <div class="onav" style="justify-content:center"><button class="btn ghost" data-close>Close</button></div>
+</div></div>
 </div>
 
 <script>
@@ -486,6 +648,7 @@ document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
   }
   function sfx(t){
     if(!AC||muted||AC.state!='running')return;var n=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+    if(t=='p'){[880,1318.5].forEach(function(f,i){var o2=AC.createOscillator(),g2=AC.createGain(),s=n+i*.12;o2.type='sine';o2.frequency.value=f;g2.gain.setValueAtTime(.0001,s);g2.gain.exponentialRampToValueAtTime(.06,s+.02);g2.gain.exponentialRampToValueAtTime(.0001,s+.9);o2.connect(g2);g2.connect(out);g2.connect(rev);o2.start(s);o2.stop(s+.95)});return}
     if(t=='h'){o.type='sine';o.frequency.setValueAtTime(1100,n);o.frequency.exponentialRampToValueAtTime(1900,n+.06);
       g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.035,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.11);
       o.connect(g);g.connect(out);o.start(n);o.stop(n+.12)}
@@ -498,6 +661,7 @@ document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
       p.connect(pg);pg.connect(out);pg.connect(rev);p.start(n+.1);p.stop(n+.75)}
   }
   label();
+  window.astraSfx=sfx;
   function first(e){
     if(btn.contains(e.target))return;
     ['click','keydown','touchend'].forEach(function(v){removeEventListener(v,first,true)});
@@ -509,7 +673,7 @@ document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
     else setMute(!muted);
     sfx('c');
   });
-  var SEL='.btn,.chip,.g,.o,.tabs button,#snd,.m';
+  var SEL='.btn,.chip,.g,.o,.tabs button,#snd,.m,.tb,.ibtn,.frow';
   document.addEventListener('mouseover',function(e){
     var t=e.target.closest&&e.target.closest(SEL);
     if(t&&t!==lastT){lastT=t;var n=Date.now();if(n-lastH>70){lastH=n;sfx('h')}}
@@ -528,6 +692,14 @@ document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
     ac.style.transform='perspective(1100px) rotateX('+((y/r.height-.5)*-5)+'deg) rotateY('+((x/r.width-.5)*6)+'deg)'});
   ac.addEventListener('mouseleave',function(){ac.style.transform=''});
 })();
+
+/* ---------- app-like: no pinch / ctrl zoom ---------- */
+(function(){
+  ['gesturestart','gesturechange','gestureend'].forEach(function(v){document.addEventListener(v,function(e){e.preventDefault()})});
+  document.addEventListener('touchmove',function(e){if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});
+  addEventListener('wheel',function(e){if(e.ctrlKey)e.preventDefault()},{passive:false});
+  addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&['+','-','=','_','0'].indexOf(e.key)>-1)e.preventDefault()});
+})();
 </script>
 
 <script type="module">
@@ -535,18 +707,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
          signOut, onAuthStateChanged, updateProfile }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, orderBy, onSnapshot, writeBatch, increment, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps) */
 const app = initializeApp({
-apiKey: "AIzaSyC6KYU2DlrP482ASiHOP-A4QRQxFtKO2Ao",
-    authDomain: "astra-looksmaxxingguide.firebaseapp.com",
-    projectId: "astra-looksmaxxingguide",
-    storageBucket: "astra-looksmaxxingguide.firebasestorage.app",
-    messagingSenderId: "251264568545",
-    appId: "1:251264568545:web:cf96babf29c90e06da7ba0",
-    measurementId: "G-GS7297Z79R"
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
 });
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -606,11 +777,11 @@ $('go').onclick = async () => {
 };
 $('out').onclick = () => signOut(auth);
 
-function view(v){ ['site','onb','app'].forEach(k => $(k).classList.toggle('hide', k !== v)); scrollTo(0, 0); }
+function view(v){ ['site','onb','app'].forEach(k => $(k).classList.toggle('hide', k !== v)); document.body.dataset.v = v; scrollTo(0, 0); }
 let cu = null;
 onAuthStateChanged(auth, async user => {
   cu = user;
-  if (!user) { view('site'); return; }
+  if (!user) { stopApp(); view('site'); return; }
   let onboarded = true;
   try { const s = await getDoc(doc(db, 'users', user.uid)); onboarded = !!(s.exists() && s.data().onboarded); }
   catch (e) { console.error(e); }
@@ -700,43 +871,257 @@ async function finish(){
 }
 resetWiz();
 
-const MS = ["Complete morning skin routine","Hydrate: finish your water goal",
-  "Train or walk for 30 minutes","Posture check, 3 times today","Sleep before midnight"];
-const MODS = [["Skin Protocol",40],["Grooming Lab",25],["Body & Posture",55],
-  ["Style Engine",15],["Sleep & Nutrition",35],["Mindset",60]];
+/* ======================= APP: profile + messages ======================= */
+const ICD = {
+  profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+  home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  msgs:'<path d="M4 5h16v11H9l-5 4z"/>',
+  edit:'<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  copy:'<rect x="9" y="9" width="11" height="11"/><path d="M5 15V5h10"/>',
+  plus:'<circle cx="9" cy="8" r="4"/><path d="M2 20c0-4 3-6 7-6"/><path d="M17 8v6M14 11h6"/>',
+  send:'<path d="M4 12l16-8-6 17-3-7z"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>'
+};
+const ICO = k => '<svg viewBox="0 0 24 24">' + ICD[k] + '</svg>';
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const B = (cls, txt, ic) => { const b = el('button', 'btn ' + cls); b.type = 'button'; if (ic) { const s = el('span', 'ico'); s.innerHTML = ICO(ic); b.append(s); } if (txt) b.append(txt); return b; };
+const TIERS = {
+  male:   [['SUB 5','Sub 5','under 5'],['LTN','Lower Tier Normie','5 - 6'],['MTN','Mid Tier Normie','6 - 7'],['HTN','Higher Tier Normie','7 - 8'],['CL','Chadlite','8 - 8.5'],['CHAD','Chad','8.5 - 9']],
+  female: [['SUB 5','Sub 5','under 5'],['LTB','Lower Tier Beauty','5 - 6'],['MTB','Mid Tier Beauty','6 - 7'],['HTB','Higher Tier Beauty','7 - 8'],['SL','Stacylite','8 - 8.5'],['STACY','Stacy','8.5 - 9']]
+};
+const tierIdx = r => (r == null || isNaN(r)) ? -1 : r < 5 ? 0 : r < 6 ? 1 : r < 7 ? 2 : r < 8 ? 3 : r < 8.5 ? 4 : 5;
+const RANKS = [['Stardust',0],['Comet',50],['Meteor',150],['Orbiter',350],['Nova',700],['Pulsar',1200],['Quasar',2000]];
+function rankOf(xp){ let i = 0; RANKS.forEach((r, k) => { if (xp >= r[1]) i = k; }); const n = RANKS[i + 1]; return { i, name: RANKS[i][0], from: RANKS[i][1], to: n ? n[1] : null, next: n ? n[0] : null }; }
+function tierInfo(p){ const t = TIERS[p.gender === 'female' ? 'female' : 'male'], i = tierIdx(p.rating); return { t, i, code: i < 0 ? 'UNRATED' : t[i][0], full: i < 0 ? 'Face and body analysis unlocks your tier' : t[i][1] }; }
 
-async function loadDash(user){
-  $('hi').textContent = 'Welcome, ' + (user.displayName || 'explorer');
-  $('date').textContent = new Date().toDateString();
-  const today = new Date().toISOString().slice(0, 10);
-  const ref = doc(db, 'users', user.uid, 'days', today);
-  let done = [];
-  try { const snap = await getDoc(ref); if (snap.exists()) done = snap.data().done; } catch (e) { console.error(e); }
+let me = null, P = null, FR = {}, CH = {}, friendIds = [], curF = null, unsubs = [], fUnsubs = {}, msgUnsub = null, lastDocs = [], linksOpen = false, prevUn = null, pend;
+const cidOf = f => [me, f].sort().join('_');
+const dkey = t => { t = t || new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
+const tm = t => { if (!t || !t.toDate) return ''; const d = t.toDate(), n = new Date(); return d.toDateString() === n.toDateString() ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString([], { day: 'numeric', month: 'short' }); };
+const toast = (() => { let t; return m => { const e = $('toast'); e.textContent = m; e.classList.add('on'); clearTimeout(t); t = setTimeout(() => e.classList.remove('on'), 2600); }; })();
+const copy = (txt, msg) => { (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(msg || 'Copied'), () => toast('Copy failed')); };
+const listen = (ref, fn) => onSnapshot(ref, fn, e => { console.error(e); if (e.code === 'permission-denied') toast('Update your Firestore rules'); });
+const hdl = s => s.trim().replace(/^@/, '').replace(/[^\w.\-]/g, '').slice(0, 40);
+const toUrl = v => { v = (v || '').trim(); if (/^https?:\/\/\S+$/i.test(v)) return v; if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v)) return 'https://' + v; return null; };
+const showM = id => $(id).classList.remove('hide'), closeM = id => $(id).classList.add('hide');
 
-  function paint(){
-    $('ms').innerHTML = '';
-    MS.forEach((t, i) => {
-      const d = document.createElement('div');
-      const on = done.includes(i);
-      d.className = 'm' + (on ? ' done' : '');
-      d.innerHTML = '<b>' + (on ? '\u2713' : '') + '</b><span>' + t + '</span>';
-      d.onclick = async () => {
-        done = on ? done.filter(x => x !== i) : [...done, i];
-        paint();
-        try { await setDoc(ref, { done, updatedAt: serverTimestamp() }); } catch (e) { console.error(e); }
-      };
-      $('ms').appendChild(d);
-    });
-    const p = Math.round(done.length / MS.length * 100);
-    $('pct').textContent = p + '%';
-    $('cnt').textContent = done.length + '/' + MS.length;
-    $('rg').style.strokeDashoffset = 327 - 327 * p / 100;
-  }
-  paint();
-  $('mods').innerHTML = MODS.map(m =>
-    '<div class="row"><span>' + m[0] + '</span><span>' + m[1] + '%</span></div>' +
-    '<div class="bar"><i style="width:' + m[1] + '%"></i></div>').join('');
+function avatar(photo, size){
+  const ok = typeof photo === 'string' && photo.startsWith('data:image/jpeg;base64,');
+  const a = el('div', 'av ' + size + (ok ? '' : ' def')), i = document.createElement('img');
+  i.alt = ''; i.draggable = false; i.src = ok ? photo : 'astra-icon.png'; a.append(i); return a;
 }
+function linksPanel(p){
+  const w = el('div', 'lpanel'), L = p.links || {}, rows = [];
+  if (L.snap) rows.push(['Snapchat', '@' + L.snap, 'https://www.snapchat.com/add/' + encodeURIComponent(L.snap)]);
+  if (L.insta) rows.push(['Instagram', '@' + L.insta, 'https://www.instagram.com/' + encodeURIComponent(L.insta)]);
+  if (L.discord) rows.push(['Discord', L.discord, null]);
+  if (L.cVal) rows.push([L.cLabel || 'Link', L.cVal, toUrl(L.cVal)]);
+  if (!rows.length) w.append(el('div', 'dim', 'No links added yet.'));
+  rows.forEach(r => {
+    let a;
+    if (r[2]) { a = el('a', 'lrow'); a.href = r[2]; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    else { a = el('button', 'lrow'); a.type = 'button'; a.onclick = () => copy(r[1], r[0] + ' copied'); }
+    a.append(el('span', 'mono', r[0]), el('span', null, r[1])); w.append(a);
+  });
+  return w;
+}
+function profileCard(p, own, bare){
+  const c = el('div', bare ? 'pcard' : 'card static pcard'), top = el('div', 'ptop'), info = el('div', 'pinfo'), ti = tierInfo(p), rk = rankOf(p.xp || 0);
+  top.append(avatar(p.photo, 'lg'));
+  info.append(el('div', 'mono', (p.gender === 'female' ? 'Female' : 'Male') + ' sector'), el('h2', null, p.name || 'Explorer'));
+  const bd = el('div', 'badges'); bd.append(el('span', 'badge hi', ti.code), el('span', 'badge', rk.name)); info.append(bd);
+  info.append(el('p', 'bio', p.bio || (own ? 'No bio yet. Tap the pencil to add one.' : 'No bio yet.')));
+  const row = el('div', 'prow'), lb = B('', 'Links', 'link'); row.append(lb); info.append(row); top.append(info); c.append(top);
+  let panel = null;
+  const toggle = () => { if (panel) { panel.remove(); panel = null; if (own) linksOpen = false; } else { panel = linksPanel(p); c.append(panel); if (own) linksOpen = true; } };
+  lb.onclick = toggle; if (own && linksOpen) toggle();
+  if (own) { const e = el('button', 'ibtn ebtn'); e.type = 'button'; e.innerHTML = ICO('edit'); e.setAttribute('aria-label', 'Edit profile'); e.onclick = openEdit; c.append(e); }
+  return c;
+}
+function statsRow(p){
+  const w = el('div', 'sg'), ti = tierInfo(p), rk = rankOf(p.xp || 0), xp = p.xp || 0;
+  const c1 = el('div', 'card static'); c1.append(el('div', 'n', 'PLAYER TIER'), el('div', 'bigt', ti.code), el('div', 'dim', ti.full));
+  const lad = el('div', 'lad'); ti.t.forEach((x, k) => { const d = el('div', k === ti.i ? 'on' : ''); d.title = x[1]; d.append(el('b', null, x[0]), el('span', null, x[2])); lad.append(d); });
+  c1.append(lad);
+  const c2 = el('div', 'card static'); c2.append(el('div', 'n', 'RANK // ACTIVITY'), el('div', 'bigt', rk.name), el('div', 'dim', 'Level ' + (rk.i + 1) + ' \u00b7 ' + (p.streak || 0) + ' day streak'));
+  const bar = el('div', 'bar'), f = document.createElement('i'); f.style.width = (rk.to ? Math.min(100, (xp - rk.from) / (rk.to - rk.from) * 100) : 100) + '%'; bar.append(f);
+  const r = el('div', 'row'); r.append(el('span', null, xp + ' XP'), el('span', null, rk.next ? (rk.to - xp) + ' XP to ' + rk.next : 'Max rank'));
+  c2.append(bar, r); w.append(c1, c2); return w;
+}
+function codeCard(p){
+  const c = el('div', 'card static codec'), l = el('div'), r = el('div', 'prow');
+  l.append(el('div', 'n', 'YOUR FRIEND CODE'));
+  const cd = el('div', 'code', p.friendCode || '--------'); cd.onclick = () => p.friendCode && copy(p.friendCode, 'Code copied'); l.append(cd);
+  const cp = B('ghost sm', 'Copy', 'copy'), ad = B('solid', 'Add friend', 'plus'); cp.onclick = cd.onclick; ad.onclick = openAdd; r.append(cp, ad); c.append(l, r); return c;
+}
+function renderProfile(){ if (P) $('pf').replaceChildren(profileCard(P, true), statsRow(P), codeCard(P)); }
+
+/* ---- edit profile ---- */
+function readPhoto(file){ return new Promise((res, rej) => {
+  if (!file || !file.type.startsWith('image/')) return rej();
+  const fr = new FileReader(); fr.onerror = rej;
+  fr.onload = () => { const im = new Image(); im.onerror = rej; im.onload = () => {
+    const s = Math.min(im.width, im.height), c = document.createElement('canvas'); c.width = c.height = 256;
+    c.getContext('2d').drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 256, 256); res(c.toDataURL('image/jpeg', .82)); };
+    im.src = fr.result; };
+  fr.readAsDataURL(file); }); }
+function setPrev(u){ $('ePrev').replaceChildren(avatar(u, 'lg')); }
+function openEdit(){
+  if (!P) return; const L = P.links || {}; pend = undefined;
+  $('eName').value = P.name || ''; $('eBio').value = P.bio || ''; $('eSnap').value = L.snap || ''; $('eInsta').value = L.insta || '';
+  $('eDisc').value = L.discord || ''; $('eCL').value = L.cLabel || ''; $('eCV').value = L.cVal || '';
+  $('eCnt').textContent = $('eBio').value.length + '/160'; $('eMsg').textContent = ''; setPrev(P.photo); showM('mEdit');
+}
+$('eBio').oninput = () => $('eCnt').textContent = $('eBio').value.length + '/160';
+$('ePick').onclick = () => $('ePhoto').click();
+$('ePhoto').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { pend = await readPhoto(f); setPrev(pend); } catch (x) { $('eMsg').textContent = 'Could not read that image.'; } };
+$('eRm').onclick = () => { pend = ''; setPrev(''); };
+$('eSave').onclick = async () => {
+  const name = $('eName').value.trim().slice(0, 24);
+  if (!name) { $('eMsg').textContent = "Name can't be empty."; return; }
+  const upd = { name, bio: $('eBio').value.trim().slice(0, 160), links: { snap: hdl($('eSnap').value), insta: hdl($('eInsta').value), discord: $('eDisc').value.trim().slice(0, 40), cLabel: $('eCL').value.trim().slice(0, 20), cVal: $('eCV').value.trim().slice(0, 100) } };
+  if (pend !== undefined) upd.photo = pend;
+  try { await updateDoc(doc(db, 'profiles', me), upd); if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: name }); closeM('mEdit'); toast('Profile saved'); }
+  catch (e) { console.error(e); $('eMsg').textContent = 'Could not save. Try again.'; }
+};
+
+/* ---- friend codes ---- */
+const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+async function makeCode(uid){
+  for (let t = 0; t < 8; t++) {
+    let c = ''; crypto.getRandomValues(new Uint32Array(8)).forEach(v => c += ALPHA[v % ALPHA.length]);
+    const ref = doc(db, 'codes', c);
+    if (!(await getDoc(ref)).exists()) { await setDoc(ref, { uid }); return c; }
+  }
+  throw new Error('code');
+}
+function openAdd(){ $('aCode').value = ''; $('aMsg').textContent = ''; showM('mAdd'); setTimeout(() => $('aCode').focus(), 50); }
+$('aCode').oninput = e => e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+$('aGo').onclick = async () => {
+  const code = $('aCode').value, m = $('aMsg'); m.textContent = '';
+  if (code.length < 6) { m.textContent = 'Enter a valid code.'; return; }
+  if (P && code === P.friendCode) { m.textContent = "That's your own code."; return; }
+  try {
+    const c = await getDoc(doc(db, 'codes', code));
+    if (!c.exists()) { m.textContent = 'No user found with that code.'; return; }
+    const fid = c.data().uid; if (friendIds.includes(fid)) { m.textContent = 'You are already friends.'; return; }
+    const b = writeBatch(db);
+    b.set(doc(db, 'users', me, 'friends', fid), { since: serverTimestamp() });
+    b.set(doc(db, 'users', fid, 'friends', me), { since: serverTimestamp() });
+    b.set(doc(db, 'chats', cidOf(fid)), { members: [me, fid], unread: { [me]: 0, [fid]: 0 }, last: null, lastAt: serverTimestamp() }, { merge: true });
+    await b.commit(); closeM('mAdd'); toast('Friend added'); tab('msgs');
+  } catch (e) { console.error(e); m.textContent = 'Could not add friend. Check your connection.'; }
+};
+$('addBtn').onclick = openAdd;
+
+/* ---- messages ---- */
+function renderMsgs(){
+  const box = $('flist'); if (!box || !me) return;
+  const rows = friendIds.map(fid => { const c = CH[cidOf(fid)] || {}; return { fid, f: FR[fid] || {}, c, un: (c.unread && c.unread[me]) || 0, at: c.last && c.lastAt && c.lastAt.toMillis ? c.lastAt.toMillis() : 0 }; })
+    .sort((a, b) => (b.un > 0) - (a.un > 0) || b.at - a.at || (a.f.name || '').localeCompare(b.f.name || ''));
+  if (!rows.length) { const e = el('div', 'empty'); e.append(el('div', 'mono', 'No friends yet'), el('p', 'dim', 'Add someone with their friend code to start chatting.')); box.replaceChildren(e); return; }
+  box.replaceChildren(...rows.map(r => {
+    const row = el('div', 'frow' + (r.un ? ' un' : '') + (r.fid === curF ? ' sel' : '')), t = el('div', 't'), s = el('div', 'side2'), l = r.c.last;
+    t.append(el('div', 'nm', r.f.name || 'Friend'), el('div', 'pv', l ? (l.from === me ? 'You: ' : '') + l.text : 'Say hello'));
+    s.append(el('div', 'tm', l ? tm(r.c.lastAt) : '')); if (r.un) s.append(el('div', 'cnt', r.un > 9 ? '9+' : String(r.un)));
+    row.append(avatar(r.f.photo, 'md'), t, s); row.onclick = () => openChat(r.fid); return row;
+  }));
+}
+function badge(){
+  let n = 0; Object.values(CH).forEach(c => { n += (c.unread && c.unread[me]) || 0; });
+  const b = $('nb'); b.textContent = n > 9 ? '9+' : String(n); b.classList.toggle('hide', !n);
+  document.title = n ? '(' + n + ') ASTRA' : 'ASTRA';
+  if (prevUn !== null && n > prevUn && window.astraSfx) window.astraSfx('p');
+  prevUn = n;
+}
+function chatHead(){
+  const f = FR[curF] || {}, h = $('chead'), back = el('button', 'ibtn back'), who = el('div', 'who'), tx = el('div');
+  back.type = 'button'; back.innerHTML = ICO('back'); back.setAttribute('aria-label', 'Back'); back.onclick = closeChat;
+  tx.append(el('div', 'nm2', f.name || 'Friend'), el('div', 'mono', tierInfo(f).code)); who.append(avatar(f.photo, 'md'), tx); who.onclick = () => showFriend(curF);
+  h.replaceChildren(back, who);
+}
+function showFriend(fid){ const f = FR[fid]; if (!f) return; $('fbody').replaceChildren(profileCard(f, false, true), statsRow(f)); showM('mFriend'); }
+function openChat(fid){
+  curF = fid; $('msgs').classList.add('open'); $('cempty').classList.add('hide'); $('cview').classList.remove('hide'); $('cbody').replaceChildren(); chatHead(); renderMsgs();
+  if (msgUnsub) msgUnsub(); lastDocs = [];
+  msgUnsub = listen(query(collection(db, 'chats', cidOf(fid), 'messages'), orderBy('createdAt')), s => {
+    renderChat(s.docs.map(d => Object.assign({ id: d.id }, d.data({ serverTimestamps: 'estimate' })))); markRead(s.docs); });
+}
+function closeChat(){ if (msgUnsub) msgUnsub(); msgUnsub = null; curF = null; $('msgs').classList.remove('open'); $('cview').classList.add('hide'); $('cempty').classList.remove('hide'); renderMsgs(); }
+function renderChat(list){
+  const b = $('cbody'), near = !b.children.length || b.scrollHeight - b.scrollTop - b.clientHeight < 140; let lastMine = -1;
+  list.forEach((m, i) => { if (m.from === me) lastMine = i; });
+  if (!list.length) { b.replaceChildren(el('div', 'empty', 'No messages yet. Say hello.')); return; }
+  b.replaceChildren(...list.map((m, i) => {
+    const mine = m.from === me, d = el('div', 'bub' + (mine ? ' me' : '')), meta = el('div', 'meta');
+    d.append(el('div', null, m.text)); meta.append(el('span', null, tm(m.createdAt)));
+    if (mine) meta.append(el('span', 'rc' + (m.readAt ? ' seen' : ''), (m.readAt ? '\u2713\u2713' : '\u2713') + (i === lastMine ? (m.readAt ? ' Seen' : ' Sent') : '')));
+    d.append(meta); return d;
+  }));
+  if (near) b.scrollTop = b.scrollHeight;
+}
+async function markRead(docs){
+  if (docs) lastDocs = docs;
+  if (!curF || !me || document.visibilityState !== 'visible' || !$('pg-msgs').classList.contains('on')) return;
+  const un = lastDocs.filter(d => { const x = d.data(); return x.to === me && !x.readAt; }), c = CH[cidOf(curF)];
+  if (!un.length && !(c && c.unread && c.unread[me])) return;
+  try { const b = writeBatch(db); un.forEach(d => b.update(d.ref, { readAt: serverTimestamp() })); b.update(doc(db, 'chats', cidOf(curF)), { ['unread.' + me]: 0 }); await b.commit(); } catch (e) { console.error(e); }
+}
+document.addEventListener('visibilitychange', () => markRead());
+async function send(){
+  const t = $('cin').value.trim(); if (!t || !curF) return; $('cin').value = ''; $('cin').style.height = '';
+  const to = curF, c = cidOf(to), b = writeBatch(db);
+  b.set(doc(collection(db, 'chats', c, 'messages')), { from: me, to, text: t.slice(0, 1000), createdAt: serverTimestamp(), readAt: null });
+  b.update(doc(db, 'chats', c), { last: { text: t.slice(0, 80), from: me }, lastAt: serverTimestamp(), ['unread.' + to]: increment(1) });
+  try { await b.commit(); updateDoc(doc(db, 'profiles', me), { xp: increment(2) }).catch(() => {}); } catch (e) { console.error(e); toast('Message failed to send'); }
+}
+$('cin').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+$('cin').oninput = e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; };
+$('csend').innerHTML = ICO('send'); $('csend').onclick = send; $('cico').innerHTML = ICO('msgs');
+
+/* ---- shell: tabs + modals ---- */
+document.querySelectorAll('.tb').forEach(b => { b.innerHTML = ICO(b.dataset.t) + (b.dataset.t === 'msgs' ? '<em id="nb" class="hide">0</em>' : ''); b.onclick = () => tab(b.dataset.t); });
+function tab(t){
+  document.querySelectorAll('.tb').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('.pg').forEach(p => p.classList.toggle('on', p.id === 'pg-' + t));
+  if (t === 'msgs') markRead(); scrollTo(0, 0);
+}
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m) m.classList.add('hide'); }));
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('.modal').classList.add('hide')));
+addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal').forEach(m => m.classList.add('hide')); });
+
+/* ---- lifecycle ---- */
+function stopApp(){
+  unsubs.forEach(u => u()); unsubs = []; Object.values(fUnsubs).forEach(u => u()); fUnsubs = {};
+  if (msgUnsub) msgUnsub(); msgUnsub = null;
+  me = null; P = null; FR = {}; CH = {}; friendIds = []; curF = null; prevUn = null; lastDocs = []; linksOpen = false;
+  document.querySelectorAll('.modal').forEach(m => m.classList.add('hide'));
+  $('msgs').classList.remove('open'); $('cview').classList.add('hide'); $('cempty').classList.remove('hide');
+  $('pf').replaceChildren(); $('flist').replaceChildren(); document.title = 'ASTRA'; tab('profile');
+}
+function watchFriends(){
+  friendIds.forEach(f => { if (!fUnsubs[f]) fUnsubs[f] = listen(doc(db, 'profiles', f), s => { FR[f] = s.data() || {}; renderMsgs(); if (curF === f) chatHead(); }); });
+  renderMsgs();
+}
+function loadDash(user){ return startApp(user); }
+async function startApp(user){
+  stopApp(); const uid = me = user.uid;
+  try {
+    const pref = doc(db, 'profiles', uid); let s = await getDoc(pref), gender = null;
+    try { const u = await getDoc(doc(db, 'users', uid)); gender = u.exists() && u.data().profile ? u.data().profile.gender : null; } catch (e) { console.error(e); }
+    if (!s.exists()) await setDoc(pref, { name: user.displayName || 'Explorer', gender: gender || 'male', friendCode: await makeCode(uid), bio: '', photo: '', links: {}, xp: 0, streak: 0, rating: null, lastVisit: '', createdAt: serverTimestamp() });
+    else { const d = s.data(), fix = {}; if (!d.friendCode) fix.friendCode = await makeCode(uid); if (gender && d.gender !== gender) fix.gender = gender; if (Object.keys(fix).length) await updateDoc(pref, fix); }
+    s = await getDoc(pref); const d = s.data(), t = dkey(), y = new Date(); y.setDate(y.getDate() - 1);
+    if (d.lastVisit !== t) await updateDoc(pref, { xp: increment(10), lastVisit: t, streak: d.lastVisit === dkey(y) ? (d.streak || 0) + 1 : 1 });
+  } catch (e) { console.error(e); toast('Could not load your profile. Check Firestore rules.'); }
+  if (me !== uid) return;
+  unsubs.push(listen(doc(db, 'profiles', uid), s => { P = s.data() || null; renderProfile(); renderMsgs(); }));
+  unsubs.push(listen(collection(db, 'users', uid, 'friends'), s => { friendIds = s.docs.map(d => d.id); watchFriends(); }));
+  unsubs.push(listen(query(collection(db, 'chats'), where('members', 'array-contains', uid)), s => { CH = {}; s.docs.forEach(d => CH[d.id] = d.data({ serverTimestamps: 'estimate' })); renderMsgs(); badge(); }));
+  tab('profile');
+}
+
 </script>
 </body>
 </html>

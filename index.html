@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASTRA</title>
 <link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{--fg:#fff;--dim:#8d8d8d;--line:rgba(255,255,255,.15);--mono:"SF Mono",Menlo,Consolas,monospace}
+:root{--fg:#fff;--dim:#8d8d8d;--line:rgba(255,255,255,.15);--mono:"Space Mono","SF Mono",Menlo,Consolas,monospace;--disp:"Syncopate","Space Grotesk","Helvetica Neue",Arial,sans-serif}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:#000;color:var(--fg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:hidden;padding-top:env(safe-area-inset-top)}
+body{margin:0;background:#000;color:var(--fg);font-family:"Space Grotesk","Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:hidden;padding-top:env(safe-area-inset-top)}
 body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
 #stars{position:fixed;inset:0;width:100%;height:100%;z-index:0}
 #glow{position:fixed;width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.08),transparent 65%);pointer-events:none;z-index:1;left:50%;top:50%}
@@ -36,11 +38,12 @@ nav{position:fixed;top:env(safe-area-inset-top);left:0;right:0;z-index:20;displa
 .emblem i:before{content:"";position:absolute;top:-3px;left:50%;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 14px 3px #fff}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fl{50%{transform:translateY(-14px)}}
-h1{margin:0;font-weight:200;font-size:clamp(46px,12vw,130px);letter-spacing:.3em;margin-left:.3em;text-shadow:0 0 50px rgba(255,255,255,.45);position:relative}
-h1.glitch:before,h1.glitch:after{content:attr(data-t);position:absolute;inset:0;opacity:.6}
-h1.glitch:before{animation:gl 5s infinite;clip-path:inset(0 0 60% 0);color:#aaa}
-h1.glitch:after{animation:gl 5s infinite reverse .3s;clip-path:inset(60% 0 0 0);color:#666}
-@keyframes gl{0%,92%,100%{transform:none}94%{transform:translateX(-6px)}96%{transform:translateX(6px)}98%{transform:translateX(-3px)}}
+h1{font-family:var(--disp);font-weight:700;margin:0 0 0 .28em;font-size:clamp(38px,10.5vw,118px);letter-spacing:.28em;position:relative;filter:drop-shadow(0 0 26px rgba(255,255,255,.35))}
+h1.glitch:before,h1.glitch:after{content:attr(data-t);position:absolute;inset:0;opacity:0;pointer-events:none}
+h1.glitch:before{clip-path:inset(0 0 55% 0);animation:g1 5s infinite}
+h1.glitch:after{clip-path:inset(55% 0 0 0);animation:g2 5s infinite}
+@keyframes g1{0%,90%,100%{opacity:0;transform:none}91%{opacity:.85;transform:translateX(-8px)}93%{opacity:.85;transform:translateX(7px)}95%{opacity:0}}
+@keyframes g2{0%,92%,100%{opacity:0;transform:none}93%{opacity:.85;transform:translateX(8px)}95%{opacity:.85;transform:translateX(-6px)}97%{opacity:0}}
 .sub{margin:22px 0 14px;min-height:22px;font-family:var(--mono);letter-spacing:.25em;text-transform:uppercase;font-size:12px;color:#ddd}
 .sub:after{content:"▍";animation:bl 1s steps(1) infinite}
 @keyframes bl{50%{opacity:0}}
@@ -116,7 +119,7 @@ footer{text-align:center;padding:40px 6vw 60px;color:#555;font-size:11px;letter-
 .hud.tr:before,.hud.br:before{margin-left:auto}
 @media(max-width:700px){.hud{display:none}}
 .emblem{transition:transform .2s ease-out;transform-style:preserve-3d}
-.sweep{position:absolute;inset:-42%;border-radius:50%;text-decoration:none;background:conic-gradient(from 0deg,transparent 0 280deg,rgba(255,255,255,.25) 360deg);-webkit-mask:radial-gradient(circle,transparent 33%,#000 34%);mask:radial-gradient(circle,transparent 33%,#000 34%);animation:spin 6s linear infinite;z-index:1}
+.sweep{position:absolute;inset:-42%;border-radius:50%;text-decoration:none;background:conic-gradient(from 0deg,transparent 0 280deg,rgba(255,255,255,.14) 360deg);-webkit-mask:radial-gradient(circle,transparent 33%,#000 36%,#000 48%,transparent 70%);mask:radial-gradient(circle,transparent 33%,#000 36%,#000 48%,transparent 70%);animation:spin 6s linear infinite;z-index:1}
 .hero:after{content:"";position:absolute;width:140vmin;height:140vmin;left:50%;top:48%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,255,255,.1),transparent 60%);z-index:-1;pointer-events:none}
 .tick{overflow:hidden;border-block:1px solid var(--line);padding:16px 0;background:rgba(255,255,255,.03);backdrop-filter:blur(4px)}
 .track{display:flex;width:max-content;animation:mq 26s linear infinite}
@@ -180,11 +183,72 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radiu
 #sync{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px}
 #sync .emblem{width:150px;margin:0}
 #sl{min-height:20px}
+
+/* ===== v3: fonts, buttons, account panel, sound ===== */
+h2,.ph{font-family:var(--disp);font-weight:400}
+h2{font-size:clamp(18px,3.4vw,38px);letter-spacing:.1em;line-height:1.3}
+.ph{font-size:20px;letter-spacing:.08em}
+.brand{font-family:var(--disp);font-weight:700;font-size:13px}
+input[type=date]{color-scheme:dark}
+#dob{font-size:24px;font-weight:300;text-align:center;letter-spacing:.15em;margin-bottom:22px}
+.btn{overflow:hidden;font-weight:500}
+.btn:after{content:"";position:absolute;top:0;left:-130%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-22deg);pointer-events:none}
+.btn.solid:after{background:linear-gradient(100deg,transparent,rgba(0,0,0,.22),transparent)}
+.btn:hover:after{left:150%;transition:left .75s ease}
+.btn:active{transform:scale(.94);box-shadow:0 0 44px rgba(255,255,255,.85)}
+.btn.solid{animation:bp 3.2s ease-in-out infinite}
+@keyframes bp{50%{filter:drop-shadow(0 0 12px rgba(255,255,255,.55))}}
+.rip{position:absolute;width:10px;height:10px;margin:-5px;border-radius:50%;background:rgba(255,255,255,.7);pointer-events:none;animation:rp .7s ease-out forwards}
+.btn.solid .rip{background:rgba(0,0,0,.35)}
+@keyframes rp{to{transform:scale(40);opacity:0}}
+.tabs{position:relative;overflow:hidden}
+.tabs:before{content:"";position:absolute;top:0;bottom:0;left:0;width:50%;background:#fff;box-shadow:0 0 24px rgba(255,255,255,.6);transition:transform .45s cubic-bezier(.7,0,.2,1)}
+.tabs.s:before{transform:translateX(100%)}
+.tabs button{position:relative;z-index:1;transition:color .3s}
+.tabs button.on{background:none;color:#000}
+.auth2{--mx:50%;--my:50%;max-width:920px;margin:0 auto;display:grid;grid-template-columns:.9fr 1.1fr;position:relative;border:1px solid transparent;background:linear-gradient(rgba(0,0,0,.9),rgba(0,0,0,.9)) padding-box,conic-gradient(from var(--a),transparent 0,transparent 55%,#fff 85%,transparent 100%) border-box;animation:rot 4s linear infinite;box-shadow:0 0 140px rgba(255,255,255,.12);transition:transform .2s ease-out}
+.auth2:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(360px circle at var(--mx) var(--my),rgba(255,255,255,.1),transparent 60%)}
+.aa{position:relative;overflow:hidden;padding:40px 30px;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;background:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px) 0 0/100% 28px,linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px) 0 0/28px 100%}
+.aemb{width:120px;margin:10px 0 30px}
+.aa h3{font-family:var(--disp);font-weight:400;letter-spacing:.1em;text-transform:uppercase;font-size:16px;margin:2px 0 18px;line-height:1.4}
+.ar{list-style:none;padding:0;margin:0;width:100%}
+.ar li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;letter-spacing:.1em;text-transform:uppercase}
+.ar li span{color:var(--dim)}
+.ar li b{font-family:var(--mono);font-weight:400;font-size:11px}
+.ar li b:before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;margin-right:8px;animation:bl 1.6s infinite}
+.ar li:nth-child(2) b:before{animation-delay:.4s}.ar li:nth-child(3) b:before{animation-delay:.8s}
+.ft{margin-top:auto;padding-top:22px}
+.aa:before,.aa:after,.af:before,.af:after{content:"";position:absolute;width:14px;height:14px;border:0 solid #fff;opacity:.8}
+.aa:before{top:10px;left:10px;border-top-width:1px;border-left-width:1px}
+.aa:after{bottom:10px;left:10px;border-bottom-width:1px;border-left-width:1px}
+.af:before{top:10px;right:10px;border-top-width:1px;border-right-width:1px}
+.af:after{bottom:10px;right:10px;border-bottom-width:1px;border-right-width:1px}
+.af{position:relative;padding:40px 34px}
+.af .btn{width:100%}
+.af input:focus{background:rgba(255,255,255,.09)}
+#fN:not(.hide){animation:pin .4s}
+.pw{position:relative}.pw input{padding-right:72px}
+.pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;color:var(--dim);padding:10px}
+.pw button:hover{color:#fff}
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:-6px 0 14px}
+.meter i{height:3px;background:var(--line);transition:.3s}
+.meter i.on{background:#fff;box-shadow:0 0 8px #fff}
+@media(max-width:760px){.auth2{grid-template-columns:1fr}.aa{border-right:0;border-bottom:1px solid var(--line);padding:26px}.ar,.ft{display:none}}
+#snd{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:70;display:flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:10px 16px;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);color:#fff;cursor:pointer}
+#snd:hover{border-color:#fff;box-shadow:0 0 20px rgba(255,255,255,.3)}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:12px;margin-right:9px}
+.eq i{display:block;width:2px;height:3px;background:#fff}
+#snd.live .eq i{animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.3s!important}.eq i:nth-child(3){animation-delay:-.6s!important}.eq i:nth-child(4){animation-delay:-.15s!important}
+@keyframes eq{50%{height:12px}}
+.emblem img,#boot img,.brand img,.scanbox img{border-radius:0!important}
+.scanbox{background:#000}
 </style>
 </head>
 <body>
 <div id="boot"><img src="astra-icon.png" alt=""><div class="mono">ASTRA // INITIALIZING</div><div class="bb"><i></i></div></div>
 <div id="prog"></div><div id="cur"></div>
+<button id="snd" class="mono" aria-label="Toggle sound"><span class="eq"><i></i><i></i><i></i><i></i></span><span id="sndt">Sound on</span></button>
 <canvas id="stars"></canvas><canvas id="shoot"></canvas><div id="glow"></div>
 
 <!-- ========== PUBLIC SITE ========== -->
@@ -224,16 +288,29 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radiu
 <section id="access">
   <h2 class="rv">Access ASTRA</h2>
   <p class="center rv">Create your account or log in to enter your personal dashboard.</p>
-  <div class="auth rv">
-    <img class="logo" src="astra-icon.png" alt="">
-    <div class="mono" style="text-align:center">Secure entry // Dashboard</div>
-    <div class="tabs"><button id="tL" class="on">Log in</button><button id="tS">Sign up</button></div>
-    <div id="fN" class="hide"><label><span class="mono">Name</span><input id="name" autocomplete="name" placeholder="Your name"></label></div>
-    <label><span class="mono">Email</span><input id="email" type="email" autocomplete="email" placeholder="you@email.com"></label>
-    <label><span class="mono">Password</span><input id="pass" type="password" autocomplete="current-password" placeholder="••••••••"></label>
-    <div class="msg" id="msg"></div>
-    <button class="btn solid" id="go">Enter ASTRA</button>
-  </div>
+  <div class="rv"><div class="auth2" id="ac">
+    <aside class="aa">
+      <div class="emblem aemb"><i></i><i></i><img src="astra-icon.png" alt=""><u class="sweep"></u></div>
+      <div class="mono" id="at">Authenticate</div>
+      <h3 id="ah">Welcome back</h3>
+      <ul class="ar">
+        <li><span>Biometric profile</span><b>Ready</b></li>
+        <li><span>Daily missions</span><b>Ready</b></li>
+        <li><span>Ascent plan</span><b>Ready</b></li>
+      </ul>
+      <div class="mono ft">ID // <span id="aid">0000-0000</span></div>
+    </aside>
+    <div class="af">
+      <div class="mono" style="text-align:center">Secure entry // Dashboard</div>
+      <div class="tabs"><button id="tL" class="on">Log in</button><button id="tS">Sign up</button></div>
+      <div id="fN" class="hide"><label><span class="mono">Name</span><input id="name" autocomplete="name" placeholder="Your name"></label></div>
+      <label><span class="mono">Email</span><input id="email" type="email" autocomplete="email" placeholder="you@email.com"></label>
+      <label><span class="mono">Password</span><div class="pw"><input id="pass" type="password" autocomplete="current-password" placeholder="••••••••"><button type="button" id="sp" class="mono">Show</button></div></label>
+      <div class="meter hide" id="mt"><i></i><i></i><i></i><i></i></div>
+      <div class="msg" id="msg"></div>
+      <button class="btn solid" id="go">Enter ASTRA</button>
+    </div>
+  </div></div>
 </section>
 <footer>ASTRA · AD ASTRA PER ASPERA</footer>
 </div>
@@ -263,7 +340,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radiu
         <div class="mono">Step 02 / 04 // Body data</div>
         <h3 class="ph">Your measurements</h3><p class="pp">Used to tailor training and nutrition. Stored privately on your account.</p>
         <div class="tabs" style="margin-top:0"><button id="uM" class="on">Metric</button><button id="uI">Imperial</button></div>
-        <label><span class="mono">Age</span><input id="age" type="number" min="16" max="99" inputmode="numeric" placeholder="--"></label>
+        <label><span class="mono">Date of birth</span><input id="dob" type="date" min="1920-01-01"></label>
         <div class="fl"><span class="mono">Height</span><span class="big" id="vH"></span></div><input id="rH" type="range" min="140" max="220" value="175">
         <div class="fl"><span class="mono">Weight</span><span class="big" id="vW"></span></div><input id="rW" type="range" min="35" max="200" value="70">
         <div class="fl"><span class="mono">Shoe size (EU)</span><span class="big" id="vS"></span></div><input id="rS" type="range" min="34" max="50" value="42">
@@ -373,6 +450,84 @@ document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
     requestAnimationFrame(d)})();
 })();
 
+
+/* ---------- sound: ambient pad + UI sfx (Web Audio, no audio files) ---------- */
+(function(){
+  var AC,out,amb,rev,live=false,muted=false,lastH=0,lastT=null,btn=document.getElementById('snd'),txt=document.getElementById('sndt');
+  try{muted=localStorage.getItem('astra_mute')=='1'}catch(e){}
+  function label(){txt.textContent=muted?'Sound off':'Sound on';btn.classList.toggle('live',live&&!muted)}
+  function init(){
+    if(AC)return;var C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    AC=new C();out=AC.createGain();out.gain.value=muted?0:.9;out.connect(AC.destination);
+    amb=AC.createGain();amb.gain.setValueAtTime(0,AC.currentTime);amb.gain.linearRampToValueAtTime(1,AC.currentTime+6);amb.connect(out);
+    var n=AC.sampleRate*5,ir=AC.createBuffer(2,n,AC.sampleRate);
+    for(var c=0;c<2;c++){var d=ir.getChannelData(c);for(var i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.6)}
+    rev=AC.createConvolver();rev.buffer=ir;var rg=AC.createGain();rg.gain.value=.8;rev.connect(rg);rg.connect(out);
+    var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;lp.Q.value=.7;lp.connect(amb);lp.connect(rev);
+    var lf=AC.createOscillator(),lfg=AC.createGain();lf.frequency.value=.04;lfg.gain.value=320;lf.connect(lfg);lfg.connect(lp.frequency);lf.start();
+    [[55,.09,'sine',.05],[73.42,.07,'sine',.07],[110,.05,'triangle',.06],[146.83,.04,'sine',.09],[174.61,.025,'sine',.11],[220,.02,'triangle',.08],[329.63,.012,'sine',.1]].forEach(function(v){
+      var o=AC.createOscillator(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
+      o.type=v[2];o.frequency.value=v[0];o.detune.value=(Math.random()-.5)*14;g.gain.value=v[1];
+      l.frequency.value=v[3];lg.gain.value=v[1]*.6;l.connect(lg);lg.connect(g.gain);
+      o.connect(g);g.connect(lp);o.start();l.start()});
+    (function bell(){
+      if(!muted&&AC.state=='running'){var f=[293.66,349.23,392,440,523.25,587.33,698.46][Math.floor(Math.random()*7)],t=AC.currentTime;
+        [[1,.03],[2,.008]].forEach(function(p){var o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.value=f*p[0];
+          g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(p[1],t+.04);g.gain.exponentialRampToValueAtTime(.0001,t+6);
+          o.connect(g);g.connect(rev);g.connect(amb);o.start(t);o.stop(t+6.2)})}
+      setTimeout(bell,4500+Math.random()*6500)})();
+    live=true;label();
+  }
+  function setMute(m){
+    muted=m;try{localStorage.setItem('astra_mute',m?'1':'0')}catch(e){}
+    if(!AC){if(!m)init();label();return}
+    if(!m&&AC.state=='suspended')AC.resume();
+    out.gain.setTargetAtTime(m?0:.9,AC.currentTime,.25);label();
+  }
+  function sfx(t){
+    if(!AC||muted||AC.state!='running')return;var n=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+    if(t=='h'){o.type='sine';o.frequency.setValueAtTime(1100,n);o.frequency.exponentialRampToValueAtTime(1900,n+.06);
+      g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.035,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.11);
+      o.connect(g);g.connect(out);o.start(n);o.stop(n+.12)}
+    else{o.type='sawtooth';o.frequency.setValueAtTime(180,n);o.frequency.exponentialRampToValueAtTime(1400,n+.16);
+      var f=AC.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(400,n);f.frequency.exponentialRampToValueAtTime(5000,n+.16);
+      g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.07,n+.02);g.gain.exponentialRampToValueAtTime(.0001,n+.3);
+      o.connect(f);f.connect(g);g.connect(out);g.connect(rev);o.start(n);o.stop(n+.32);
+      var p=AC.createOscillator(),pg=AC.createGain();p.type='sine';p.frequency.value=1760;
+      pg.gain.setValueAtTime(.0001,n+.1);pg.gain.exponentialRampToValueAtTime(.05,n+.12);pg.gain.exponentialRampToValueAtTime(.0001,n+.7);
+      p.connect(pg);pg.connect(out);pg.connect(rev);p.start(n+.1);p.stop(n+.75)}
+  }
+  label();
+  function first(e){
+    if(btn.contains(e.target))return;
+    ['click','keydown','touchend'].forEach(function(v){removeEventListener(v,first,true)});
+    if(!muted){init();if(AC)AC.resume()}
+  }
+  ['click','keydown','touchend'].forEach(function(v){addEventListener(v,first,true)});
+  btn.addEventListener('click',function(){
+    if(!AC){muted=false;try{localStorage.setItem('astra_mute','0')}catch(e){}init();if(AC)AC.resume();label()}
+    else setMute(!muted);
+    sfx('c');
+  });
+  var SEL='.btn,.chip,.g,.o,.tabs button,#snd,.m';
+  document.addEventListener('mouseover',function(e){
+    var t=e.target.closest&&e.target.closest(SEL);
+    if(t&&t!==lastT){lastT=t;var n=Date.now();if(n-lastH>70){lastH=n;sfx('h')}}
+    else if(!t)lastT=null});
+  document.addEventListener('pointerdown',function(e){
+    var t=e.target.closest&&e.target.closest(SEL);if(!t)return;sfx('c');
+    if(t.classList.contains('btn')){var r=document.createElement('span'),b=t.getBoundingClientRect();r.className='rip';
+      r.style.left=(e.clientX-b.left)+'px';r.style.top=(e.clientY-b.top)+'px';t.appendChild(r);setTimeout(function(){r.remove()},750)}
+  });
+})();
+/* ---------- account panel: spotlight + tilt ---------- */
+(function(){
+  var ac=document.getElementById('ac');if(!ac)return;
+  ac.addEventListener('mousemove',function(e){var r=ac.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    ac.style.setProperty('--mx',x+'px');ac.style.setProperty('--my',y+'px');
+    ac.style.transform='perspective(1100px) rotateX('+((y/r.height-.5)*-5)+'deg) rotateY('+((x/r.width-.5)*6)+'deg)'});
+  ac.addEventListener('mouseleave',function(){ac.style.transform=''});
+})();
 </script>
 
 <script type="module">
@@ -385,13 +540,12 @@ import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
 
 /* PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps) */
 const app = initializeApp({
-apiKey: "AIzaSyC6KYU2DlrP482ASiHOP-A4QRQxFtKO2Ao",
-    authDomain: "astra-looksmaxxingguide.firebaseapp.com",
-    projectId: "astra-looksmaxxingguide",
-    storageBucket: "astra-looksmaxxingguide.firebasestorage.app",
-    messagingSenderId: "251264568545",
-    appId: "1:251264568545:web:cf96babf29c90e06da7ba0",
-    measurementId: "G-GS7297Z79R"
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
 });
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -402,9 +556,22 @@ function setMode(m){
   mode = m;
   $('tL').classList.toggle('on', m === 'login');
   $('tS').classList.toggle('on', m === 'signup');
+  $('tL').parentNode.classList.toggle('s', m === 'signup');
   $('fN').classList.toggle('hide', m === 'login');
+  $('mt').classList.toggle('hide', m === 'login');
+  $('at').textContent = m === 'login' ? 'Authenticate' : 'Subject registration';
+  $('ah').textContent = m === 'login' ? 'Welcome back' : 'Create your profile';
+  $('go').textContent = m === 'login' ? 'Enter ASTRA' : 'Create account';
+  $('aid').textContent = Math.random().toString(16).slice(2, 6).toUpperCase() + '-' + Math.random().toString(16).slice(2, 6).toUpperCase();
+  $('pass').autocomplete = m === 'login' ? 'current-password' : 'new-password';
   $('msg').textContent = '';
 }
+$('sp').onclick = () => { const p = $('pass'), s = p.type === 'password'; p.type = s ? 'text' : 'password'; $('sp').textContent = s ? 'Hide' : 'Show'; };
+$('pass').oninput = e => {
+  const v = e.target.value, n = (v.length >= 8) + /[A-Z]/.test(v) + /[0-9]/.test(v) + /[^A-Za-z0-9]/.test(v);
+  document.querySelectorAll('#mt i').forEach((b, i) => b.classList.toggle('on', i < n));
+};
+setMode('login');
 $('tL').onclick = () => setMode('login');
 $('tS').onclick = () => setMode('signup');
 document.querySelectorAll('[data-mode]').forEach(a =>
@@ -454,9 +621,15 @@ $('out2').onclick = () => signOut(auth);
 /* ---- first-time onboarding wizard ---- */
 let S, step = 0;
 const cmIn = c => { const t = Math.round(c / 2.54); return Math.floor(t / 12) + '\u2032 ' + (t % 12) + '\u2033'; };
+function ageOf(d){
+  if (!d) return null; const [y, m, dd] = d.split('-').map(Number); if (!y) return null;
+  const t = new Date(); let a = t.getFullYear() - y;
+  if (t.getMonth() + 1 < m || (t.getMonth() + 1 === m && t.getDate() < dd)) a--;
+  return a < 0 ? null : a;
+}
 function resetWiz(){
-  S = { gender:null, age:'', unit:'metric', height:175, weight:70, shoe:42, activity:null, days:null, sleep:7, goals:[] };
-  $('age').value = ''; $('rH').value = 175; $('rW').value = 70; $('rS').value = 42; $('rSl').value = 7;
+  S = { gender:null, dob:'', unit:'metric', height:175, weight:70, shoe:42, activity:null, days:null, sleep:7, goals:[] };
+  $('dob').value = ''; $('dob').max = new Date().toISOString().slice(0, 10); $('rH').value = 175; $('rW').value = 70; $('rS').value = 42; $('rSl').value = 7;
   document.querySelectorAll('#onb .on').forEach(e => { if (e.closest('.pane')) e.classList.remove('on'); });
   setUnit('metric'); go(0);
 }
@@ -466,13 +639,13 @@ function fmt(){
 }
 function hud(){
   const f = fmt(), R = [
-    ['Gender', S.gender], ['Age', S.age], ['Height', f.h], ['Weight', f.w], ['Shoe', 'EU ' + S.shoe],
+    ['Gender', S.gender], ['Age', ageOf(S.dob)], ['Height', f.h], ['Weight', f.w], ['Shoe', 'EU ' + S.shoe],
     ['Activity', S.activity], ['Training', S.days === null ? '' : S.days + ' days / wk'], ['Sleep', S.sleep + ' h'],
     ['Focus', S.goals.join(', ')]];
   $('hrows').innerHTML = R.map(r => '<div class="hr"><span>' + r[0] + '</span><span class="' + (r[1] ? '' : 'e') + '">' + (r[1] || '\u2014') + '</span></div>').join('');
   const g = fmt(); $('vH').textContent = g.h; $('vW').textContent = g.w; $('vS').textContent = S.shoe; $('vSl').textContent = S.sleep + ' h';
 }
-function setUnit(u){ S.unit = u; $('uM').classList.toggle('on', u === 'metric'); $('uI').classList.toggle('on', u === 'imperial'); hud(); }
+function setUnit(u){ S.unit = u; $('uM').parentNode.classList.toggle('s', u === 'imperial'); $('uM').classList.toggle('on', u === 'metric'); $('uI').classList.toggle('on', u === 'imperial'); hud(); }
 function go(n){
   step = n;
   document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', +p.dataset.s === n));
@@ -483,7 +656,7 @@ function go(n){
 }
 function check(n){
   if (n === 0 && !S.gender) return 'Select your gender to continue.';
-  if (n === 1 && !(S.age >= 16 && S.age <= 99)) return 'Enter your age (16 or older).';
+  if (n === 1) { const a = ageOf(S.dob); if (a === null) return 'Enter your date of birth.'; if (a < 16) return 'ASTRA is for ages 16 and up.'; if (a > 99) return 'Check your date of birth.'; }
   if (n === 2 && (!S.activity || S.days === null)) return 'Choose your activity level and training days.';
   if (n === 3 && !S.goals.length) return 'Pick at least one focus area.';
   return '';
@@ -494,7 +667,7 @@ pick('#act .o', e => { S.activity = e.dataset.v; document.querySelectorAll('#act
 pick('#days .chip', e => { S.days = +e.dataset.v; document.querySelectorAll('#days .chip').forEach(x => x.classList.toggle('on', x === e)); hud(); });
 pick('#goals .chip', e => { e.classList.toggle('on'); S.goals = [...document.querySelectorAll('#goals .chip.on')].map(x => x.dataset.v); hud(); });
 $('uM').onclick = () => setUnit('metric'); $('uI').onclick = () => setUnit('imperial');
-$('age').oninput = e => { S.age = +e.target.value || ''; hud(); };
+$('dob').oninput = e => { S.dob = e.target.value; hud(); };
 $('rH').oninput = e => { S.height = +e.target.value; hud(); };
 $('rW').oninput = e => { S.weight = +e.target.value; hud(); };
 $('rS').oninput = e => { S.shoe = +e.target.value; hud(); };
@@ -510,7 +683,7 @@ async function finish(){
   const L = ['SYNCING PROFILE', 'CALIBRATING DASHBOARD', 'ACCESS GRANTED'], sf = $('sf');
   sf.style.animation = 'none'; sf.style.width = '0'; void sf.offsetWidth; sf.style.animation = 'bf 2.6s ease forwards';
   L.forEach((t, i) => setTimeout(() => $('sl').textContent = t, i * 900));
-  const profile = { gender:S.gender, age:S.age, units:S.unit, heightCm:S.height, weightKg:S.weight, shoeEU:S.shoe,
+  const profile = { gender:S.gender, dob:S.dob, units:S.unit, heightCm:S.height, weightKg:S.weight, shoeEU:S.shoe,
     activity:S.activity, trainingDays:S.days, sleepHours:S.sleep, goals:S.goals };
   try {
     await Promise.all([

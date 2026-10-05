@@ -45,7 +45,7 @@ function evalAll(g, M){
     a.factors.forEach(f => { const e = evalF(f, g, M); per[f.id] = e; if (e.state !== 'none') done++; if (e.state === 'scored') sc.push(e.score); });
     const score = sc.length ? sc.reduce((x, y) => x + y, 0) / sc.length : null;
     ar[a.id] = { done, total: a.factors.length, score, scored: sc.length };
-    if (score != null) { ws += a.w; tot += a.w * score; }
+    if (score != null) { const w = a.w * Math.min(1, sc.length / Math.max(1, Math.ceil(a.factors.length * .4))); ws += w; tot += w * score; }
   });
   const score = ws >= .5 ? tot / ws : null;
   return { per, ar, score, rating: score == null ? null : Math.max(0, Math.min(10, CONFIG.ratingFromScore(score))) };
@@ -124,6 +124,7 @@ const CSS = `
 .f-back{display:flex;align-items:center;gap:10px;margin-bottom:4px}
 .f-list .f-row{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:12px 14px}
 .f-lr{display:grid;gap:8px;margin-top:12px}
+.f-seg{display:inline-flex;gap:3px;margin:0 8px}.f-seg i{width:14px;height:5px;background:var(--line)}.f-seg i.on{background:#fff;box-shadow:0 0 6px #fff}.f-mt div{display:flex;align-items:center}.f-fs{color:#cfcfcf;font-size:13px;line-height:1.5;margin-top:8px}.f-risk{color:#ff9aa6}.f-src{margin-top:8px;font-size:9px}
 /* scanner */
 .f-scanm .f-sbox{width:min(560px,100%);max-height:96vh;overflow:auto;padding:22px}
 .f-cam{position:relative;aspect-ratio:3/4;max-height:56vh;margin:0 auto;background:#000;border:1px solid var(--line);overflow:hidden}
@@ -143,7 +144,7 @@ const CSS = `
 /* ================================================================== */
 export function initFace(ctx){
   const { $, el, B, ICO, toast, showM, closeM } = ctx;
-  const st = { gender: 'male', age: null, uid: null, data: null, area: null, sub: 0, open: {}, sort: 'best' };
+  const st = { gender: 'male', age: null, uid: null, data: null, area: null, sub: 0, open: {}, sort: 'best', all: false };
   if (!document.getElementById('f-css')) { const s = document.createElement('style'); s.id = 'f-css'; s.textContent = CSS; document.head.appendChild(s); }
   const root = ctx.root;
   let ev = evalAll('male', {});
@@ -290,15 +291,22 @@ export function initFace(ctx){
     if (st.open[f.id]) r.append(fixList(f));
     return r;
   }
+  const seg = (n, cls) => { const s = el('span', 'f-seg ' + (cls || '')); for (let i = 0; i < 5; i++) s.append(el('i', i < n ? 'on' : '')); return s; };
+  const EV = { verified: ['Verified', 'v1'], mixed: ['Mixed evidence', 'v3'], unverified: ['Unverified claim', 'bad'] };
+  const INV = ['procedure', 'surgical', 'medical'];
+  const rankFix = x => x.works * 2 + x.safe + (x.evidence === 'verified' ? 3 : x.evidence === 'mixed' ? 1 : 0);
   function fixList(f){
-    const box = el('div', 'f-fix'), L = FIXES[f.id] || [];
+    const box = el('div', 'f-fix'), L = (FIXES[f.id] || []).slice().sort((p, q) => rankFix(q) - rankFix(p));
     if (!L.length) { box.append(el('div', 'dim', 'Fix guides for this factor are being added. Each one will show how well it works, how safe it is, and whether the claim is verified.')); return box; }
+    box.append(el('div', 'dim', 'Sorted by how well they work, how safe they are and how well proven. "Unverified claim" means people say it works but it has not been verified.'));
     L.forEach(x => {
-      const min = x.minAge != null ? x.minAge : (x.kind === 'procedure' || x.kind === 'surgical' ? CONFIG.minAgeInvasive : 0), lock = min && (st.age == null || st.age < min), c = el('div', 'f-fixc' + (lock ? ' lock' : ''));
-      if (lock) { c.append(el('div', 'mono', 'Locked'), el('div', 'dim', 'Procedures and surgery are only shown to users aged ' + min + ' and over.')); box.append(c); return; }
-      c.append(el('div', 'f-nm', x.title), el('span', 'f-chip', x.kind), el('span', 'f-chip ' + (x.evidence === 'verified' ? 'v1' : x.evidence === 'unverified' ? 'bad' : 'v3'), x.evidence === 'verified' ? 'Verified' : x.evidence === 'mixed' ? 'Mixed evidence' : 'Unverified claim'));
-      const mt = el('div', 'f-mt'); [['Works', x.works], ['Safe', x.safe]].forEach(m => { const s = el('span', null, m[0] + ' '); s.append(el('b', null, m[1] + ' / 5')); mt.append(s); }); c.append(mt);
-      if (x.summary) c.append(el('div', 'dim', x.summary)); if (x.risks) c.append(el('div', 'dim', 'Risks: ' + x.risks)); box.append(c);
+      const min = x.minAge != null ? x.minAge : (INV.includes(x.kind) ? CONFIG.minAgeInvasive : 0), lock = min && (st.age == null || st.age < min), c = el('div', 'f-fixc' + (lock ? ' lock' : ''));
+      if (lock) { c.append(el('div', 'mono', 'Locked'), el('div', 'dim', 'Procedures, surgery and prescription drugs are only shown to users aged ' + min + ' and over.')); box.append(c); return; }
+      const ev = EV[x.evidence] || EV.unverified;
+      c.append(el('div', 'f-nm', x.title), el('span', 'f-chip', x.kind), el('span', 'f-chip ' + ev[1], ev[0]));
+      const mt = el('div', 'f-mt'); [['Works', x.works], ['Safe', x.safe]].forEach(m => { const s = el('div'); s.append(el('span', null, m[0]), seg(m[1]), el('b', null, m[1] + '/5')); mt.append(s); }); c.append(mt);
+      if (x.summary) c.append(el('div', 'f-fs', x.summary)); if (x.risks) c.append(el('div', 'f-fs f-risk', 'Risks: ' + x.risks)); if (x.source) c.append(el('div', 'mono f-src', 'Source: ' + x.source));
+      box.append(c);
     });
     return box;
   }
@@ -314,8 +322,9 @@ export function initFace(ctx){
     const l = el('div'); l.append(el('div', 'f-big', ev.rating != null ? round(ev.rating, 1) + ' / 10' : '--'), el('div', 'dim', (ev.rating != null ? 'Tier ' + ctx.tierOf(ev.rating, st.gender).code : 'Not enough rated areas for a tier') + (st.data.demo ? ' \u00b7 DEMO DATA' : '')));
     const sb = B('ghost sm', st.sort === 'best' ? 'Best first' : 'Worst first', null); sb.onclick = () => { st.sort = st.sort === 'best' ? 'worst' : 'best'; ctx.onChange(); }; top.append(l, sb); c.append(top);
     const list = el('div', 'f-lr');
-    sc.forEach(x => { const f = x[0], e = x[1], r = el('div', 'f-row'), vd = verdict(e.score); r.append(el('div', null), el('div', 'f-sc', e.score)); r.firstChild.append(el('div', 'f-nm', f.name), el('div', 'dim', x[2].name + ' \u00b7 you ' + valTxt(f, e) + ' \u00b7 ideal ' + (idealTxt(f, st.gender) || 'pending'))); const bar = el('div', 'f-bar'), i = document.createElement('i'); i.style.width = e.score + '%'; bar.append(i); bar.style.gridColumn = '1 / -1'; r.append(bar); const ch = el('span', 'f-chip ' + vd[1], vd[0]); ch.style.gridColumn = '1 / -1'; r.append(ch); list.append(r); });
+    (st.all ? sc : sc.slice(0, 8)).forEach(x => { const f = x[0], e = x[1], r = el('div', 'f-row'), vd = verdict(e.score); r.append(el('div', null), el('div', 'f-sc', e.score)); r.firstChild.append(el('div', 'f-nm', f.name), el('div', 'dim', x[2].name + ' \u00b7 you ' + valTxt(f, e) + ' \u00b7 ideal ' + (idealTxt(f, st.gender) || 'pending'))); const bar = el('div', 'f-bar'), i = document.createElement('i'); i.style.width = e.score + '%'; bar.append(i); bar.style.gridColumn = '1 / -1'; r.append(bar); const ch = el('span', 'f-chip ' + vd[1], vd[0]); ch.style.gridColumn = '1 / -1'; r.append(ch); list.append(r); });
     c.append(list);
+    if (sc.length > 8) { const m = B('ghost sm', st.all ? 'Show top 8 only' : 'Show all ' + sc.length + ' factors', null); m.style.marginTop = '12px'; m.onclick = () => { st.all = !st.all; ctx.onChange(); }; c.append(m); }
     if (other.length) { const d = document.createElement('details'); d.style.marginTop = '14px'; const s = document.createElement('summary'); s.textContent = 'Measured but not scored (' + other.length + ')'; s.className = 'mono'; s.style.cursor = 'pointer'; d.append(s); other.forEach(x => { const r = el('div', 'f-row'); r.style.marginTop = '8px'; r.append(el('div', 'f-nm', x[0].name), el('div', 'dim', x[2].name + ' \u00b7 ' + valTxt(x[0], x[1]) + ' \u00b7 ' + youAre(x[0], x[1]))); d.append(r); }); c.append(d); }
     const del = B('ghost sm', 'Delete my face data', null); del.style.marginTop = '16px'; del.onclick = async () => { if (!confirm('Delete all stored face measurements and your rating?')) return; try { await ctx.store.clear(); api.setData(null); toast('Face data deleted'); } catch (e) { toast('Could not delete'); } }; c.append(del);
     return c;

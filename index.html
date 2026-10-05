@@ -367,6 +367,21 @@ body[data-v=app] #snd{bottom:auto;top:calc(14px + env(safe-area-inset-top));righ
 .pg{padding:0;margin:0 auto}
 .pinfo .bio{margin:14px 0 18px}
 .modal>.glowb{padding:28px}
+
+/* ===== v5: thinner sidebar ===== */
+.side{width:56px;gap:8px}
+.sbrand{width:28px;height:28px;top:calc(14px + env(safe-area-inset-top))}
+.tb{width:42px;height:42px;border-radius:12px}
+.tb svg{width:22px;height:22px}
+.tb:after{left:50px}
+.tb em{top:-6px;right:-6px;min-width:17px;height:17px;font-size:10px;padding:0 4px}
+.pages{margin-left:56px}
+@media(max-width:760px){
+  .side{width:auto;gap:6px;padding:6px 10px;border-radius:24px}
+  .tb{width:48px;height:48px;border-radius:16px}
+  .tb svg{width:24px;height:24px}
+  .pages{margin-left:0;padding:70px 4vw 110px}
+}
 </style>
 </head>
 <body>
@@ -518,7 +533,7 @@ body[data-v=app] #snd{bottom:auto;top:calc(14px + env(safe-area-inset-top));righ
 </nav>
 <main class="pages">
   <section class="pg on" id="pg-profile"><div id="pf"></div><div class="lo"><button class="btn ghost sm" id="out">Log out</button></div></section>
-  <section class="pg" id="pg-home"><div class="card static" style="text-align:center;padding:70px 20px"><img src="astra-icon.png" alt="" style="width:120px;opacity:.9"><div class="mono" style="margin-top:14px">Home // coming next</div></div></section>
+  <section class="pg" id="pg-home"><div id="home"></div></section>
   <section class="pg" id="pg-msgs">
     <div class="msgs" id="msgs">
       <div class="lpane">
@@ -703,22 +718,23 @@ document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
 </script>
 
 <script type="module">
+import { initFace } from "./face.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
          signOut, onAuthStateChanged, updateProfile }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, orderBy, onSnapshot, writeBatch, increment, serverTimestamp }
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, query, where, orderBy, onSnapshot, writeBatch, increment, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps) */
 const app = initializeApp({
-apiKey: "AIzaSyC6KYU2DlrP482ASiHOP-A4QRQxFtKO2Ao",
-    authDomain: "astra-looksmaxxingguide.firebaseapp.com",
-    projectId: "astra-looksmaxxingguide",
-    storageBucket: "astra-looksmaxxingguide.firebasestorage.app",
-    messagingSenderId: "251264568545",
-    appId: "1:251264568545:web:cf96babf29c90e06da7ba0",
-    measurementId: "G-GS7297Z79R"
+  apiKey: "AIzaSyC6KYU2DlrP482ASiHOP-A4QRQxFtKO2Ao",
+  authDomain: "astra-looksmaxxingguide.firebaseapp.com",
+  projectId: "astra-looksmaxxingguide",
+  storageBucket: "astra-looksmaxxingguide.firebasestorage.app",
+  messagingSenderId: "251264568545",
+  appId: "1:251264568545:web:cf96babf29c90e06da7ba0",
+  measurementId: "G-GS7297Z79R"
 });
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -902,10 +918,19 @@ const dkey = t => { t = t || new Date(); return t.getFullYear() + '-' + String(t
 const tm = t => { if (!t || !t.toDate) return ''; const d = t.toDate(), n = new Date(); return d.toDateString() === n.toDateString() ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString([], { day: 'numeric', month: 'short' }); };
 const toast = (() => { let t; return m => { const e = $('toast'); e.textContent = m; e.classList.add('on'); clearTimeout(t); t = setTimeout(() => e.classList.remove('on'), 2600); }; })();
 const copy = (txt, msg) => { (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(msg || 'Copied'), () => toast('Copy failed')); };
-const listen = (ref, fn) => onSnapshot(ref, fn, e => { console.error(e); if (e.code === 'permission-denied') toast('Update your Firestore rules'); });
+const listen = (ref, fn, onErr) => onSnapshot(ref, fn, e => { console.error(e); if (e.code === 'permission-denied') toast('Update your Firestore rules'); if (onErr) onErr(e); });
 const hdl = s => s.trim().replace(/^@/, '').replace(/[^\w.\-]/g, '').slice(0, 40);
 const toUrl = v => { v = (v || '').trim(); if (/^https?:\/\/\S+$/i.test(v)) return v; if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v)) return 'https://' + v; return null; };
 const showM = id => $(id).classList.remove('hide'), closeM = id => $(id).classList.add('hide');
+const faceStore = {
+  load: async () => { const s = await getDoc(doc(db, 'users', me, 'data', 'face')); return s.exists() ? s.data() : null; },
+  save: async (data, rating, score) => { await setDoc(doc(db, 'users', me, 'data', 'face'), data); await updateDoc(doc(db, 'profiles', me), { rating, faceScore: score, scannedAt: serverTimestamp() }); },
+  clear: async () => { await deleteDoc(doc(db, 'users', me, 'data', 'face')); await updateDoc(doc(db, 'profiles', me), { rating: null, faceScore: null }); }
+};
+const FACE = initFace({ root: $('home'), $, el, B, ICO, toast, showM, closeM, store: faceStore,
+  token: () => auth.currentUser.getIdToken(),
+  tierOf: (r, g) => { const t = tierInfo({ rating: r, gender: g }); return { code: t.code, full: t.full }; },
+  onChange: () => renderProfile(), goHome: () => tab('home') });
 
 function avatar(photo, size){
   const ok = typeof photo === 'string' && photo.startsWith('data:image/jpeg;base64,');
@@ -956,7 +981,20 @@ function codeCard(p){
   const cd = el('div', 'code', p.friendCode || '--------'); cd.onclick = () => p.friendCode && copy(p.friendCode, 'Code copied'); l.append(cd);
   const cp = B('ghost sm', 'Copy', 'copy'), ad = B('solid', 'Add friend', 'plus'); cp.onclick = cd.onclick; ad.onclick = openAdd; r.append(cp, ad); c.append(l, r); return c;
 }
-function renderProfile(){ if (P) $('pf').replaceChildren(profileCard(P, true), statsRow(P), codeCard(P)); }
+function pfError(e){
+  const c = el('div', 'card static'), r = B('solid', 'Try again', null);
+  r.onclick = () => auth.currentUser && startApp(auth.currentUser);
+  c.append(el('div', 'n', 'PROFILE // COULD NOT LOAD'), el('p', null, 'Your profile could not be loaded.'),
+    el('p', 'dim', 'Code: ' + ((e && e.code) || (e && e.message) || 'unknown') + ((e && e.code) === 'permission-denied' ? '. Publish the rules from firestore.rules in Firebase, then try again.' : '')), r);
+  $('pf').replaceChildren(c);
+}
+function renderProfile(){
+  if (!P) return;
+  try {
+    const r = FACE.rating(), view = Object.assign({}, P, r != null ? { rating: r } : {});
+    $('pf').replaceChildren(profileCard(view, true), statsRow(view), FACE.listCard(), codeCard(P));
+  } catch (e) { console.error(e); pfError(e); }
+}
 
 /* ---- edit profile ---- */
 function readPhoto(file){ return new Promise((res, rej) => {
@@ -1086,7 +1124,7 @@ document.querySelectorAll('.tb').forEach(b => { b.innerHTML = ICO(b.dataset.t) +
 function tab(t){
   document.querySelectorAll('.tb').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   document.querySelectorAll('.pg').forEach(p => p.classList.toggle('on', p.id === 'pg-' + t));
-  if (t === 'msgs') markRead(); scrollTo(0, 0);
+  if (t === 'msgs') markRead(); if (t === 'home') FACE.show(); else FACE.hide(); scrollTo(0, 0);
 }
 document.querySelectorAll('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m) m.classList.add('hide'); }));
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('.modal').classList.add('hide')));
@@ -1099,7 +1137,7 @@ function stopApp(){
   me = null; P = null; FR = {}; CH = {}; friendIds = []; curF = null; prevUn = null; lastDocs = []; linksOpen = false;
   document.querySelectorAll('.modal').forEach(m => m.classList.add('hide'));
   $('msgs').classList.remove('open'); $('cview').classList.add('hide'); $('cempty').classList.remove('hide');
-  $('pf').replaceChildren(); $('flist').replaceChildren(); document.title = 'ASTRA'; tab('profile');
+  $('pf').replaceChildren(); $('flist').replaceChildren(); document.title = 'ASTRA'; FACE.reset(); tab('profile');
 }
 function watchFriends(){
   friendIds.forEach(f => { if (!fUnsubs[f]) fUnsubs[f] = listen(doc(db, 'profiles', f), s => { FR[f] = s.data() || {}; renderMsgs(); if (curF === f) chatHead(); }); });
@@ -1107,17 +1145,18 @@ function watchFriends(){
 }
 function loadDash(user){ return startApp(user); }
 async function startApp(user){
-  stopApp(); const uid = me = user.uid;
+  stopApp(); const uid = me = user.uid; let faceAge = null; $('pf').replaceChildren(el('div', 'card static', 'Loading your profile...'));
   try {
     const pref = doc(db, 'profiles', uid); let s = await getDoc(pref), gender = null;
-    try { const u = await getDoc(doc(db, 'users', uid)); gender = u.exists() && u.data().profile ? u.data().profile.gender : null; } catch (e) { console.error(e); }
+    try { const u = await getDoc(doc(db, 'users', uid)); const pr = u.exists() && u.data().profile ? u.data().profile : {}; gender = pr.gender || null; faceAge = ageOf(pr.dob); } catch (e) { console.error(e); }
     if (!s.exists()) await setDoc(pref, { name: user.displayName || 'Explorer', gender: gender || 'male', friendCode: await makeCode(uid), bio: '', photo: '', links: {}, xp: 0, streak: 0, rating: null, lastVisit: '', createdAt: serverTimestamp() });
     else { const d = s.data(), fix = {}; if (!d.friendCode) fix.friendCode = await makeCode(uid); if (gender && d.gender !== gender) fix.gender = gender; if (Object.keys(fix).length) await updateDoc(pref, fix); }
     s = await getDoc(pref); const d = s.data(), t = dkey(), y = new Date(); y.setDate(y.getDate() - 1);
     if (d.lastVisit !== t) await updateDoc(pref, { xp: increment(10), lastVisit: t, streak: d.lastVisit === dkey(y) ? (d.streak || 0) + 1 : 1 });
   } catch (e) { console.error(e); toast('Could not load your profile. Check Firestore rules.'); }
   if (me !== uid) return;
-  unsubs.push(listen(doc(db, 'profiles', uid), s => { P = s.data() || null; renderProfile(); renderMsgs(); }));
+  try { const g = (await getDoc(doc(db, 'profiles', uid))).data(); FACE.setUser({ uid, gender: g && g.gender, age: faceAge }); const fd = await faceStore.load(); FACE.setData(fd); } catch (e) { console.error(e); }
+  unsubs.push(listen(doc(db, 'profiles', uid), s => { P = s.data() || null; if (!P) { pfError({ code: 'no-profile' }); return; } renderProfile(); renderMsgs(); }, pfError));
   unsubs.push(listen(collection(db, 'users', uid, 'friends'), s => { friendIds = s.docs.map(d => d.id); watchFriends(); }));
   unsubs.push(listen(query(collection(db, 'chats'), where('members', 'array-contains', uid)), s => { CH = {}; s.docs.forEach(d => CH[d.id] = d.data({ serverTimestamps: 'estimate' })); renderMsgs(); badge(); }));
   tab('profile');

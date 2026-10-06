@@ -382,12 +382,25 @@ body[data-v=app] #snd{bottom:auto;top:calc(14px + env(safe-area-inset-top));righ
   .tb svg{width:24px;height:24px}
   .pages{margin-left:0;padding:70px 4vw 110px}
 }
+#errbar{position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top));z-index:200;background:#ff2442;color:#fff;padding:10px 14px;font:12px/1.4 var(--mono);border-radius:10px;display:none;box-shadow:0 0 24px rgba(255,36,66,.6);cursor:pointer;-webkit-user-select:text;user-select:text}
 </style>
 </head>
 <body>
 <div id="boot"><img src="astra-icon.png" alt=""><div class="mono">ASTRA // INITIALIZING</div><div class="bb"><i></i></div></div>
 <div id="prog"></div><div id="cur"></div><div id="toast"></div>
 <button id="snd" class="mono" aria-label="Toggle sound"><span class="eq"><i></i><i></i><i></i><i></i></span><span id="sndt">Sound on</span></button>
+<script>
+(function(){
+  window.astraErr=function(m){
+    var b=document.getElementById('errbar');
+    if(!b){b=document.createElement('div');b.id='errbar';b.onclick=function(){b.style.display='none'};document.body.appendChild(b)}
+    b.textContent='Something went wrong: '+m+'  (tap to hide)';b.style.display='block';
+  };
+  window.addEventListener('error',function(e){var m=e.message||'';if(!m||m==='Script error.'||/ResizeObserver/.test(m))return;window.astraErr(m)});
+  window.addEventListener('unhandledrejection',function(e){var r=e.reason;if(r&&r.code==='auth/network-request-failed')return;window.astraErr((r&&(r.code||r.message))||String(r))});
+  setTimeout(function(){if(!window.__astraOK)window.astraErr('the app code did not load. Refresh the page. If it keeps failing, upload every file again (index.html, manifest.webmanifest and the icons).')},9000);
+})();
+</script>
 <canvas id="stars"></canvas><canvas id="shoot"></canvas><div id="glow"></div>
 
 <!-- ========== PUBLIC SITE ========== -->
@@ -718,7 +731,6 @@ document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
 </script>
 
 <script type="module">
-import { initFace } from "./face.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
          signOut, onAuthStateChanged, updateProfile }
@@ -727,6 +739,707 @@ import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, qu
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps) */
+const initFace = (() => {
+/* ===== face-data ===== */
+/* ==========================================================================
+   ASTRA // FACE DATA   (edit this file - no need to touch index.html)
+   - AREAS  : the 9 face areas and every factor, with the exact names
+   - ideal  : target range per gender.  null = "ideal pending" (measured, not scored yet)
+   - src    : where the ideal comes from  doc | clin | res | comm | app
+   - FIXES  : fix guides per factor id (added later, rated for effectiveness + safety)
+   ========================================================================== */
+
+const CONFIG = {
+  aiEndpoint: '',                                  // your AI scanner URL (POST). '' = not connected yet
+  ratingFromScore: s => Math.round(s) / 10,        // overall score 0-100  ->  rating 0-10 (tier uses this)
+  minAgeInvasive: 18                               // fixes of kind 'procedure' / 'surgical' are hidden below this age
+};
+
+const SRC = {
+  doc:  'Your reference document',
+  clin: 'Clinical norm',
+  res:  'Research average',
+  comm: 'Community norm (approximate)',
+  lib:  'Looksmaxxing library (ideal facial ratios)',
+  app:  'App-defined'
+};
+
+/* photo views used by the scanner */
+const VIEWS = [
+  { id:'front', name:'Front',          req:true,  tip:'Look straight into the lens. Neutral face, lips relaxed, hair off forehead and ears, no glasses. Camera at eye level.' },
+  { id:'right', name:'Right profile',  req:true,  tip:'Turn your head fully to the LEFT so the camera sees your RIGHT side. Eyes level, chin neutral.' },
+  { id:'left',  name:'Left profile',   req:true,  tip:'Turn your head fully to the RIGHT so the camera sees your LEFT side. Eyes level, chin neutral.' },
+  { id:'smile', name:'Smile',          req:false, tip:'Natural smile showing your teeth. Look straight at the lens.' },
+  { id:'up',    name:'Chin up',        req:false, tip:'Tilt your chin up about 30 degrees so the camera sees the nose base and the underside of your jaw.' },
+  { id:'close', name:'Skin and hair',  req:false, tip:'Move closer in soft daylight, no makeup. Show forehead, hairline and cheeks.' }
+];
+
+/* ---- factor builders ---- */
+const N = (id,name,abbr,view,unit,ideal,desc,o) => Object.assign({id,name,abbr,view,type:'num',unit,ideal,desc},o||{});
+const C = (id,name,abbr,view,opts,desc,o)       => Object.assign({id,name,abbr,view,type:'cat',opts,desc},o||{});   // opts: {label:score} or [labels]
+const G = (id,name,abbr,view,labels,desc,o)     => Object.assign({id,name,abbr,view,type:'grade',labels,desc},o||{}); // labels best -> worst
+const I = (id,name,abbr,view,desc,o)            => Object.assign({id,name,abbr,view,type:'info',desc},o||{});
+
+const AREAS = [
+{ id:'eyes', name:'Eyes', w:.17, factors:[
+  N('pfl','Palpebral Fissure Length (PFL)','PFL','front','mm',null,'Horizontal distance from the inner corner (medial canthus) to the outer corner (lateral canthus).',{demo:[26,33]}),
+  N('pfh','Palpebral Fissure Height (PFH)','PFH','front','mm',[2.8,3.5],'Vertical opening between the upper and lower eyelid margins. Scored as the eye aspect ratio PFL / PFH.',{ratio:['pfl','pfh'],tol:1,src:'lib',demo:[8,12]}),
+  N('icd','Intercanthal Distance (ICD)','ICD','front','mm',[0.93,1.04],'Distance between the medial canthi of both eyes. Scored as ICD / PFL (ideal: about one eye width apart).',{ratio:['icd','pfl'],tol:.25,src:'lib',demo:[30,38]}),
+  N('ipd','Interpupillary Distance (IPD)','IPD','front','mm',[0.44,0.48],'Distance between the centers of both pupils. Scored as the Eye Separation Ratio: IPD / Bizygomatic Breadth. Also the calibration reference for the scan.',{ratio:['ipd','bizygomatic'],tol:.06,src:'lib',demo:[58,68]}),
+  N('ocd','Biocular Distance (OCD)','OCD','front','mm',[2.8,3.3],'Distance between the lateral canthi (outer eye span). Scored as OCD / PFL.',{ratio:['ocd','pfl'],tol:.8,src:'comm',demo:[85,100]}),
+  N('canthal_tilt','Canthal Tilt Angle','Tilt','front','deg',[1,7],'Inclination of the line connecting medial and lateral canthi relative to the horizontal axis (positive = outer corner higher; negative = outer corner lower).',{tol:8,src:'lib',demo:[-4,10]}),
+  N('uee','Upper Eyelid Exposure (UEE)','UEE','front','mm',null,'Height of visible upper eyelid skin (tarsal platform show) when looking straight ahead.',{demo:[0,6]}),
+  G('hooding','Suprastromal Hooding / Dermatochalasis','Hood','front',['None','Mild','Moderate','Severe'],'Overhanging skin fold from the brow covering the upper eyelid space.',{src:'app'}),
+  C('scleral','Scleral Show','Sclera','front',{'None':100,'Minimal inferior':80,'Inferior':45,'Superior':45,'Inferior and superior':25},'Visible white sclera below the lower iris border (inferior scleral show) or above the upper border (superior scleral show).',{src:'app'}),
+  C('infraorbital','Infraorbital Vector','IOV','right',{'Positive':100,'Neutral':85,'Negative':35},'Sagittal alignment of the cheekbone rim relative to the cornea (positive = rim protrudes past eye; negative = rim recedes behind eye, predisposing to dark circles/bags).',{src:'app'}),
+  G('tear_trough','Tear Trough & Palpebral-Malar Groove','Trough','front',['None','Mild','Moderate','Deep'],'Depth of the bone groove beneath the inner lower lid and its transition into the upper cheek.',{src:'app'}),
+  I('lashes','Eyelash Morphology','Lash',['front','close'],'Upper and lower lash length (mm), volume density, and upward curl curvature angle.')
+]},
+{ id:'eyebrows', name:'Eyebrows', w:.06, factors:[
+  N('brow_apex','Eyebrow Apex Position','Apex','front','mm',{m:[-2,2],f:[-1,4]},'Horizontal placement of the highest point of the brow arch relative to the outer pupil edge (lateral limbus). Positive = further out.',{tol:4,src:'comm',demo:[-6,8]}),
+  N('bpd','Brow-to-Pupil Distance (BPD)','BPD','front','mm',null,'Vertical distance from the center of the pupil to the lower border of the eyebrow.',{demo:[17,29]}),
+  I('brow_shape','Brow Angle, Density & Synophrys','Brow','close','Inclination slope of the brow axis, follicle density per cm2, hair grain direction, and unibrow gap width.')
+]},
+{ id:'hair', name:'Hair', w:.05, factors:[
+  I('hair_melanin','Hair Melanin Ratio','Melanin','close','Balance of eumelanin (brown/black) to pheomelanin (red/yellow) dictating exact shade.'),
+  I('curl','Andre Walker Curl Classification','Curl','close','Scale from Type 1A (bone straight) through Type 4C (tight zig-zag coils).',{opts:['1A','1B','1C','2A','2B','2C','3A','3B','3C','4A','4B','4C']}),
+  I('strand','Strand Cross-Sectional Diameter','Strand','close','Fine (<60 um), Medium (60-80 um), or Coarse (>80 um) strand thickness.',{opts:['Fine','Medium','Coarse']}),
+  I('follicular','Follicular Density','Density','close','Hair follicle count per cm2 across scalp regions.'),
+  G('hairline','Hairline Pattern & Recession Scale','Hairline',['front','close'],{m:['I','II','III','IV','V','VI','VII'],f:['I','II','III']},'Norwood Scale (Types I-VII for male pattern loss) or Ludwig Scale (Types I-III for female diffuse loss); temporal peak sharpness.',{src:'app'}),
+  I('facial_hair','Facial Hair Follicle Density & Grain','Beard',['front','close'],'Follicle density and growth vectors across mustache, cheeks, chin, and neck regions.')
+]},
+{ id:'skin', name:'Skin', w:.12, factors:[
+  I('fitzpatrick','Fitzpatrick Phototype Scale','Fitz','close','Classification from Type I (pale white, burns easily) to Type VI (deeply pigmented, dark brown/black). Used for care advice, never scored.',{opts:['I','II','III','IV','V','VI']}),
+  C('sebum','Sebum Excretion Rate','Sebum','close',{'Normal':100,'Combination':80,'Dry':70,'Oily':70,'Dehydrated':55},'Lipid activity level determining dry, normal, combination, oily, or dehydrated barrier states.',{src:'app'}),
+  G('pores','Pore Diameter & T-Zone Distribution','Pores','close',['Fine','Mild','Moderate','Enlarged'],'Surface pore diameter (um) and density across nose, forehead, and inner cheeks.',{src:'app'}),
+  G('acne','Acne Severity & Lesion Types','Acne','close',['Clear','Mild comedonal','Moderate papulopustular','Severe nodulocystic'],'Comedonal (blackheads/whiteheads), papulopustular, or nodulocystic lesion count per zone.',{src:'app'}),
+  G('scarring','Atrophic & Hypertrophic Scarring','Scars','close',['None','Mild','Moderate','Severe'],'Scar classification: icepick, boxcar, rolling, or hypertrophic/keloidal.',{src:'app'}),
+  G('wrinkles','Wrinkle Classification (Glogau Scale)','Glogau','close',['I','II','III','IV'],'Dynamic versus static wrinkling across forehead lines, glabella "11" lines, periorbital crow\'s feet, nasolabial lines, and marionette folds.',{src:'app'}),
+  G('vascular','Vascularity & Dyschromia','Color','close',['None','Mild','Moderate','Marked'],'Erythema/rosacea/telangiectasia presence versus hyperpigmentation and sun spots.',{src:'app'})
+]},
+{ id:'nose', name:'Nose', w:.13, factors:[
+  N('nasal_length','Nasal Length & Radix Placement','NL','right','mm',null,'Distance from the nasal root crease (nasion) to the tip; vertical height of the radix origin relative to the upper eyelid crease.',{demo:[44,56]}),
+  N('radix','Radix Depth & Dorsal Height','Radix','right','mm',null,'Depth of the crease beneath the brow ridge, and height/straightness of the nasal bridge bone/cartilage.',{demo:[6,15]}),
+  N('alar_dorsal','Alar Base Breadth vs. Dorsal Width','Alar','front','ratio',null,'Transverse width across outer nostril bases compared to the narrower dorsal bridge width.',{demo:[1.2,2.4]}),
+  N('goode','Nasal Tip Projection (Goode Ratio)','Goode','right','ratio',[0.55,0.60],'How far the tip extends forward from the face relative to total nasal length (ideal ratio about 0.55-0.60).',{tol:.1,src:'doc',demo:[.45,.7]}),
+  N('nasolabial','Nasolabial Angle (Tip Rotation)','NLA','right','deg',{m:[90,95],f:[95,105]},'Angle formed between the columella (underside of nose) and upper lip (typically 90-95 deg in males, 95-105 deg in females).',{tol:20,src:'doc',demo:[80,118]}),
+  N('columella','Columella Show & Supratip Break','Col','right','mm',[2,4],'Visible height of central nostril cartilage in profile view, and the subtle step-off dip right above the nose tip.',{tol:3,src:'clin',demo:[0,7]}),
+  I('nostril','Nostril Morphology & Alar Flare','Nostril','up','Nostril opening shape (oval, teardrop, round), bilateral symmetry, and lateral alar rim flaring.')
+]},
+{ id:'mouth', name:'Mouth', w:.13, factors:[
+  N('philtrum','Philtrum Length & Column Definition','Phil','front','mm',null,'Vertical height from nose base (subnasale) to upper lip border (labiale superius), along with the depth/sharpness of vertical philtral ridges.',{demo:[10,18]}),
+  N('lower_third','Lower Third Ratio','L3','front','ratio',[0.45,0.55],'Vertical proportion comparing upper lip/philtrum length to lower lip/chin height (ideal balance about 1:2).',{tol:.25,src:'doc',demo:[.3,.7]}),
+  N('vermilion','Vermilion Thickness & Ratio','Verm','front','ratio',[0.5,0.71],'Vertical thickness of upper lip red border versus lower lip red border (ideal ratio about 1:1.6, i.e. 0.62; library range 1:1.4 to 1:2).',{tol:.3,src:'lib',demo:[.35,1]}),
+  C('cupid','Cupid\'s Bow Definition','Bow','front',{'Well defined':100,'Soft':80,'Flat':55},'Width and inclination angle of the double-peaked arch on the upper lip border.',{src:'app'}),
+  N('mouth_width','Intercomissural Width (Mouth Width)','Width','front','ratio',[1.38,1.53],'Transverse width from mouth corner to corner, evaluated relative to outer nose base width (ideal ratio about 1.5:1).',{tol:.5,src:'lib',demo:[1.1,1.9]}),
+  C('commissure','Commissure Slope','Slope','front',{'Neutral':100,'Slightly upturned':95,'Upturned':80,'Downturned':45},'Resting direction of mouth corners (neutral/horizontal, upturned, downturned).',{src:'app'}),
+  N('incisor','Resting Incisor Display','Incisor','front','mm',[1,3],'Millimeters of upper front teeth exposed when lips are fully relaxed at rest (typically 1-3 mm).',{tol:3,src:'doc',demo:[-1,6]}),
+  C('occlusion','Dental Occlusion & Alignment','Bite','smile',{'Class I':100,'Class II':55,'Class III':45},'Bite classification (Angle Class I normal, Class II overbite/retrognathic maxilla, Class III underbite/prognathic mandible), overjet distance, tooth shade index, and arch crowding.',{src:'app'}),
+  N('eline','Ricketts\' E-Line Alignment','E-Line','right','mm',[0,1.5],'Line from nose tip to chin tip. Value = average deviation of the lips from the targets (upper lip -4 mm, lower lip -2 mm); 0 is perfect.',{tol:4,src:'doc',demo:[0,6]}),
+  N('sline','Steiner\'s S-Line','S-Line','right','mm',[-1.5,1.5],'Line connecting chin tip to midpoint of nose columella curve. Value = average lip distance to the line (0 = touching).',{tol:4,src:'clin',demo:[-4,5]})
+]},
+{ id:'cheeks', name:'Cheeks & Cheekbones', w:.10, factors:[
+  I('bizygomatic','Bizygomatic Breadth','Bizyg','front','Total facial width across the prominent outer arches of the cheekbones.',{unit:'mm',demo:[125,150]}),
+  N('fwhr','Facial Width-to-Height Ratio (fWHR)','fWHR','front','ratio',[1.9,2.06],'Bizygomatic width divided by the vertical distance between the upper lip margin (subnasale) and brow midpoint.',{tol:.4,src:'lib',demo:[1.5,2.3]}),
+  N('compact_midface','Compact Midface Ratio','Midface','front','ratio',[0.97,1.10],'Distance between pupils divided by the distance from the pupil midpoint line down to the upper lip line.',{tol:.3,src:'lib',demo:[.8,1.3]}),
+  C('zygomatic','Zygomatic Projection Balance','Zyg',['front','right'],{'Balanced':100,'Forward-dominant':80,'Flare-dominant':75,'Flat':45},'Anterior (forward) cheekbone projection versus lateral (outward flare) zygomatic arch breadth.',{src:'app'}),
+  C('buccal','Buccal Fat Volume & Subzygomatic Hollowing','Buccal','front',{'Defined hollowing':100,'Slight hollowing':90,'Neutral':75,'Full':60,'Excess fullness':45,'Excess hollowing':50},'Volume of deep buccal fat pad relative to cheekbone protrusion, creating hollowed versus plump lower midface cheeks.',{src:'app'}),
+  G('nl_fold','Nasolabial Fold Depth & Angle','NL Fold','front',['None','Mild','Moderate','Deep'],'Depth and angle of the crease running from the outer nostril base down to the corner of the mouth.',{src:'app'})
+]},
+{ id:'maxilla', name:'Maxilla', w:.09, factors:[
+  C('maxillary','Maxillary Projection & Paranasal Support','Maxilla','right',{'Forward and supported':100,'Neutral':85,'Recessed':40},'Anterior projection of the maxilla bone surrounding the base of the nose.',{src:'app'}),
+  C('palatal','Palatal Vault Width & Transverse Projection','Palate','smile',{'Wide':100,'Normal':85,'Narrow (gothic)':40},'Width and arching height of the maxillary roof (narrow/gothic palate vs. wide broad palate), affecting cheek support and smile fullness (buccal corridors).',{src:'app'}),
+  N('convexity','Facial Convexity Angle','Convex','right','deg',[165,175],'Angle formed by lines connecting Glabella - Subnasale - Pogonion (165-175 deg = straight profile; <165 = convex; >180 = concave).',{tol:15,src:'doc',demo:[150,185]}),
+  I('frankfort','Frankfort Horizontal Alignment','FH','right','Standard baseline passing from top of ear canal to lower border of eye socket. Used to normalise head pose.',{unit:'deg',demo:[-6,6]})
+]},
+{ id:'underjaw', name:'Underjaw', w:.15, factors:[
+  N('ramus','Ramus Vertical Length','Ramus','right','mm',[0.59,0.75],'Distance from the jaw joint (mandibular condyle) down to the corner angle of the jaw (gonion). Scored as ramus-to-mandible ratio: ramus / mandibular body length.',{ratio:['ramus','mand_body'],tol:.2,src:'lib',demo:[45,70]}),
+  N('gonial','Gonial Angle','Gonial','right','deg',[112,123],'Internal angle where the vertical ramus meets the horizontal jaw body (typically 110-125 deg).',{tol:15,src:'lib',demo:[100,140]}),
+  N('bigonial','Bigonial Breadth','Bigon','front','mm',[0.855,0.94],'Transverse width measured across the left and right gonial jaw angles. Scored as bigonial width / bizygomatic breadth.',{ratio:['bigonial','bizygomatic'],tol:.12,src:'lib',demo:[95,125]}),
+  N('mand_body','Mandibular Body Length','Body','right','mm',null,'Distance from the jaw angle (gonion) forward to the chin tip (menton/pogonion).',{demo:[70,95]}),
+  C('mand_flare','Mandibular Flare','Flare',['front','up'],['Narrow','Moderate','Pronounced'],'Lateral outward angle of the jaw bone combined with masseter muscle thickness.'),
+  N('chin_proj','Chin Projection (Pogonion Alignment)','Chin','right','mm',{m:[-2,3],f:[-4,1]},'Forward horizontal position of the chin relative to a vertical line dropped from the nose base or forehead.',{tol:6,src:'comm',demo:[-10,8]}),
+  I('chin_morph','Chin Morphology','Chin form',['front','right'],'Chin vertical height, transverse width, squareness, pointedness, and mental cleft (dimple) presence.'),
+  G('prejowl','Pre-Jowl Sulcus Depth','Jowl','front',['None','Mild','Moderate','Deep'],'Depression notch along the jawline border situated between the chin and jaw angle.',{src:'app'}),
+  N('submental','Submental-Cervical Angle','SCA',['right','up'],'deg',[90,105],'Angle formed between the jaw underside and front of the neck (ideal angle 90-105 deg).',{tol:25,src:'doc',demo:[80,140]}),
+  N('gonion_comm','Gonion-to-Commissure Level','G-C','front','mm',null,'Vertical position of the jaw corner relative to the mouth line.',{demo:[-10,12]}),
+  N('mentolabial','Mentolabial Sulcus Depth','MLS','right','mm',null,'Horizontal indentation depth separating lower lip from top of chin.',{demo:[2,8]}),
+  C('hyoid','Hyoid Bone Position','Hyoid','right',['High and forward','Average','Low and back'],'Vertical and forward placement of the hyoid bone, dictating tight neck-line contour versus soft tissue sag.')
+]}
+];
+
+/* ==========================================================================
+   FIXES  -  filled in later. Structure (one list per factor id):
+
+   FIXES.canthal_tilt = [{
+     title:    'Name of the fix',
+     kind:     'lifestyle' | 'non-invasive' | 'procedure' | 'surgical',   // procedure + surgical are 18+ only
+     works:    0-5,                       // how well it works
+     safe:     0-5,                       // how safe it is
+     evidence: 'verified' | 'mixed' | 'unverified',   // unverified = people claim it works, not proven
+     summary:  'Short explanation',
+     risks:    'Known risks',
+     minAge:   18                         // optional override
+   }];
+   ========================================================================== */
+const FIXES = {};
+const put = (ids, o) => ids.forEach(id => (FIXES[id] = FIXES[id] || []).push(Object.assign({ source: 'Looksmaxxing library' }, o)));
+
+/* ---------- body fat, water, posture ---------- */
+put(['buccal','zygomatic','gonial','mand_flare','submental','prejowl'], { title:'Lose excess body fat (moderate deficit)', kind:'lifestyle', works:4, safe:4, evidence:'verified',
+  summary:'Facial structure shows once the fat sitting over the bone drops. Library protocol: a moderate deficit (about 400-500 kcal a day, roughly 0.5-1 lb a week), protein around 1 g per lb of bodyweight, keep lifting heavy, 8,000-12,000 steps a day. It puts the facial sweet spot around 10-12% body fat and warns most people overestimate their leanness by 3-5 points.',
+  risks:'Cutting too fast or too lean looks gaunt and harms health. Skip this and talk to a professional if you have a history of disordered eating.' });
+put(['buccal','tear_trough','submental','vascular'], { title:'Sodium, alcohol and sleep de-bloat', kind:'lifestyle', works:3, safe:5, evidence:'mixed',
+  summary:'Puffiness is often water, not fat. Library: keep sodium under about 2,000 mg a day (visible in 24-48 h), drop alcohol (one night can puff you for about 3 days), sleep 8 hours at the same time, drink plenty of water and eat potassium-rich food. Water only: it does not change fat or bone.',
+  risks:'Extreme sodium or water manipulation is not healthy long term.' });
+put(['tear_trough','buccal'], { title:'Cold splash, ice roller and light lymphatic massage', kind:'non-invasive', works:1, safe:5, evidence:'unverified',
+  summary:'Morning routine from the library: sit upright, cold-water splash, a chilled roller or fingertips from the center of the face outward with very light pressure. Temporary at best; the library itself says it is a 5% fix next to sleep and sodium.',
+  risks:'Pressing hard marks the skin and does not help drainage.' });
+put(['tear_trough'], { title:'Allergy check for puffy eyes (antihistamine trial)', kind:'non-invasive', works:2, safe:4, evidence:'mixed',
+  summary:'If eyes are puffy even with good sleep, low sodium and no alcohol, the library suggests a 5-day over-the-counter antihistamine trial with a daily photo, and a bedroom air purifier and weekly hot-wash bedding. Improvement suggests allergy. "Histamine intolerance" as a diagnosis is not well established, so see an allergist.',
+  risks:'Drowsiness and drug interactions; check the leaflet or ask a pharmacist.' });
+put(['submental','prejowl'], { title:'Head posture', kind:'lifestyle', works:2, safe:5, evidence:'unverified',
+  summary:'The library calls it minor: a better head position tightens the skin around the jaw and may give a small illusion of more projection.' });
+
+/* ---------- jaw, chin, cheekbone growth claims ---------- */
+put(['ramus','mand_body','gonial','mand_flare','chin_proj'], { title:'Chewing very tough foods for jaw growth (claimed)', kind:'lifestyle', works:1, safe:3, evidence:'unverified',
+  summary:'The library claims chewing very chewy food, even rare meat, makes jaw bone adapt, and that nothing else works. There is no evidence that adults grow jaw bone this way. Masseter muscle may thicken a little. Gonion shape and masseter insertions are genetic.',
+  risks:'Jaw joint pain, tooth wear, and food poisoning from undercooked meat.' });
+put(['chin_proj','zygomatic','mand_flare','gonial','ramus'], { title:'Bonesmashing (striking the facial bones)', kind:'non-invasive', works:0, safe:0, evidence:'unverified',
+  summary:'Claimed to trigger bone growth by repeatedly hitting the bone. No studies exist on facial bones, the library admits natural results are minimal, and one creator in it warns it can cause brain damage. The technique is deliberately not described here.',
+  risks:'Bruising, fractures, concussion or brain injury, nerve damage and asymmetry.' });
+put(['infraorbital','zygomatic','chin_proj','ramus','mand_body','mand_flare','gonial','bigonial','maxillary'], { title:'Testosterone, HGH and anabolic steroids for facial bone', kind:'medical', works:1, safe:1, evidence:'unverified',
+  summary:'The library claims hormones grow facial bone in healthy adults. Medicine does show bone-density benefits in men with low testosterone, but growing facial bone in healthy adults is not supported. Protocols, doses and sourcing are deliberately not included.',
+  risks:'Infertility, cholesterol and blood-pressure problems, mood changes, acne, hair loss, and shutdown of your natural hormone production.' });
+put(['chin_proj','zygomatic','ramus','mand_body'], { title:'DIY facial injections of growth factors (IGF-1 and similar)', kind:'medical', works:0, safe:0, evidence:'unverified',
+  summary:'Some forums claim injecting beside the facial bone grows it. There is no evidence of benefit, and the steps are deliberately not included.',
+  risks:'Nerve damage, hematoma, infection and asymmetry.' });
+put(['buccal','gonial','zygomatic','submental'], { title:'GLP-1 type weight-loss drugs (e.g. retatrutide, investigational)', kind:'medical', works:3, safe:1, evidence:'mixed',
+  summary:'The library mentions an unapproved triple-agonist drug as an appetite suppressant. Trial data show real fat loss, but it is not approved, and buying it from grey-market sellers is unsafe. Ask a doctor about approved options.',
+  risks:'GI side effects, unknown purity from underground sellers, and no long-term safety data.' });
+put(['buccal','tear_trough','submental'], { title:'Prescription diuretics for puffiness', kind:'medical', works:2, safe:1, evidence:'unverified',
+  summary:'Removes water for 24-48 hours only, with no fat loss. The library lists them as a last resort after everything else and its own verdict on the strongest one is: not for looks. Never self-dose.',
+  risks:'Dangerous potassium changes (heart rhythm), dehydration, permanent hearing damage with loop diuretics, and rebound puffiness.' });
+
+/* ---------- surgery and orthodontics the library points to ---------- */
+put(['occlusion','maxillary','convexity','chin_proj','mand_body','ramus','gonial'], { title:'Double-jaw (orthognathic) surgery', kind:'surgical', works:5, safe:2, evidence:'verified',
+  summary:'The library points to it for real skeletal problems. A surgeon moves the upper and/or lower jaw, planned together with an orthodontist.',
+  risks:'Major surgery, numbness, relapse, long recovery and bite changes.' });
+put(['palatal','maxillary','occlusion'], { title:'MSE / MARPE palate expander', kind:'procedure', works:3, safe:3, evidence:'mixed',
+  summary:'A mini-screw appliance that applies constant pressure to widen the palate. In the library study it widened the nose more (about 2.7 mm) than the cheekbones (about 2.4 mm), results can partly revert, and it typically takes 3-5 years and about $30,000-50,000 with braces. Think of it for real deformities only.',
+  risks:'Asymmetry, relapse, cost and discomfort.' });
+put(['palatal','maxillary'], { title:'Thumbpulling', kind:'non-invasive', works:0, safe:3, evidence:'unverified',
+  summary:'Claimed to widen the palate sutures by hand. The library verdict: it does nothing. Expanders work with constant pressure, and many before/after photos are just head-angle or lighting changes.',
+  risks:'Wasted time; gum or tooth irritation if you pull hard.' });
+put(['nasal_length','radix','alar_dorsal','goode','nasolabial','columella','nostril'], { title:'Rhinoplasty', kind:'surgical', works:4, safe:3, evidence:'verified',
+  summary:'The library notes the nose is mostly bone and cartilage, so only surgery changes its shape; non-surgical methods only touch skin and oil glands. Choose a qualified facial plastic surgeon.',
+  risks:'Asymmetry, breathing problems, revision surgery, scarring and anesthesia risks.' });
+put(['alar_dorsal'], { title:'Isotretinoin or tretinoin for nose bulk (claimed)', kind:'medical', works:1, safe:2, evidence:'unverified',
+  summary:'The library claims 5-20% "perceived" slimming by shrinking oil glands and pores. It is soft tissue only, never bone, and the library itself marks it disputed.',
+  risks:'Dryness, irritation, sun sensitivity; isotretinoin needs medical monitoring.' });
+put(['alar_dorsal'], { title:'Topical steroid skin-thinning for the nose', kind:'medical', works:1, safe:1, evidence:'unverified',
+  summary:'Claimed to thin the nose skin so it looks slimmer. The library flags it as unsafe. The regimen is deliberately not included.',
+  risks:'Skin thinning and damage that can be permanent, and rebound problems.' });
+
+/* ---------- skin ---------- */
+put(['wrinkles','vascular','scarring'], { title:'Daily broad-spectrum SPF 50', kind:'lifestyle', works:5, safe:5, evidence:'verified',
+  summary:'UV is the biggest driver of visible aging, and UVA reaches you all year and through windows. Use enough (about half a teaspoon for face and neck, the "two-finger rule"), apply it last in the morning, reapply every 2 hours outdoors. Gel or Asian-formula sunscreens avoid the white cast.',
+  risks:'If it breaks you out, try another formula, a mineral one, or a gel.' });
+put(['wrinkles','acne','pores','scarring','vascular','tear_trough','nl_fold'], { title:'Tretinoin (prescription vitamin A cream)', kind:'medical', minAge:16, works:4, safe:3, evidence:'verified',
+  summary:'The library calls it the best-evidenced topical for rebuilding collagen and clearing pores. Start with a low strength and a pea-sized amount a few nights a week, buffer with moisturizer, and wear sunscreen every day. Expect dryness and a rough patch around weeks 3-6; real gains come over 3-12 months.',
+  risks:'Irritation, sun sensitivity, and it is not safe in pregnancy. Get it from a doctor.' });
+put(['acne','vascular','pores'], { title:'Azelaic acid', kind:'non-invasive', works:3, safe:4, evidence:'verified',
+  summary:'Anti-inflammatory; the library cites a study where a 20% cream matched 0.05% tretinoin for comedonal acne, and it also helps rosacea and dark spots. Its claim that it lowers DHT in the skin is weakly supported.',
+  risks:'Mild stinging or dryness.' });
+put(['acne','pores','sebum','scarring'], { title:'Isotretinoin (Accutane)', kind:'medical', minAge:16, works:5, safe:2, evidence:'verified',
+  summary:'The most effective treatment for moderate to severe acne; it shrinks oil glands. It needs a prescriber, blood tests (liver, lipids) and a pregnancy-prevention program. The library also claims it slims the nose, which is disputed.',
+  risks:'Dry skin and lips, mood and eye side effects, birth defects, liver and cholesterol changes.' });
+put(['scarring','pores','wrinkles','nl_fold','tear_trough'], { title:'Microneedling', kind:'procedure', works:3, safe:3, evidence:'mixed',
+  summary:'Controlled micro-injuries trigger new collagen. The library calls it the only known way to improve under-eye elasticity and rates the results close to lasers, which is disputed. Professional treatment is safer than at-home; never needle over the orbital bone and pause strong retinoids around it.',
+  risks:'Infection, scarring, irritation and pigment changes.' });
+put(['scarring','nl_fold','wrinkles'], { title:'Localized GHK-Cu peptide injections', kind:'medical', works:1, safe:0, evidence:'unverified',
+  summary:'The library calls topical use pointless and suggests injecting into scars. Steps are deliberately not included; unregulated peptides in the face are risky.',
+  risks:'Infection, vascular occlusion and scarring.' });
+put(['wrinkles','vascular','tear_trough'], { title:'Vitamin C serum', kind:'non-invasive', works:2, safe:4, evidence:'mixed',
+  summary:'Antioxidant used in the morning before moisturizer and SPF; evens mild discoloration.' });
+put(['wrinkles'], { title:'Collagen + vitamin C, omega-3, vitamin D, astaxanthin', kind:'lifestyle', works:2, safe:4, evidence:'mixed',
+  summary:'The library\'s foundation stack, but it states no stack replaces SPF and tretinoin. Some marketing claims in it (like astaxanthin\'s strength) are hype, and collagen creams on the skin do not work.' });
+put(['wrinkles','acne','vascular','sebum','pores'], { title:'Low-sugar anti-inflammatory diet', kind:'lifestyle', works:3, safe:5, evidence:'mixed',
+  summary:'Cut refined sugar (glycation stiffens collagen), alcohol and ultra-processed food; eat protein, fatty fish, berries, greens and olive oil. The library expects skin changes in 4-8 weeks.' });
+put(['tear_trough','wrinkles','nl_fold','vascular'], { title:'Sleep 8 hours, cool dark room, back sleeping', kind:'lifestyle', works:3, safe:5, evidence:'mixed',
+  summary:'Skin repairs overnight and poor sleep raises cortisol. Library: 8 hours in bed at a consistent time, no alcohol within 4 hours of bed, screens off 30-60 minutes before, and sleeping on your back to avoid one-sided compression wrinkles.' });
+put(['wrinkles','vascular','nl_fold','tear_trough'], { title:'Quit smoking', kind:'lifestyle', works:4, safe:5, evidence:'verified',
+  summary:'The library claims smoking adds 7-10 years of facial aging and ranks quitting as the top step after SPF. The skin damage from smoking is well established.' });
+put(['wrinkles','tear_trough'], { title:'Sunglasses outdoors', kind:'lifestyle', works:2, safe:5, evidence:'verified',
+  summary:'Cuts UV around the eyes and the squinting that deepens crow\'s feet.' });
+put(['wrinkles'], { title:'Regular exercise (resistance + easy cardio)', kind:'lifestyle', works:2, safe:4, evidence:'mixed',
+  summary:'Library: lift 3-4 times a week plus easy zone-2 cardio and 8,000-10,000 steps. It claims better skin tone, less puffiness and a leaner face.' });
+
+/* ---------- eyes, brows, lashes, lips ---------- */
+put(['brow_shape'], { title:'Topical minoxidil on the brows', kind:'non-invasive', minAge:18, works:3, safe:3, evidence:'mixed',
+  summary:'Off-label use to thicken brow hair by prolonging the growth phase. Results take months and fade when you stop.',
+  risks:'Skin irritation and unwanted hair nearby. Keep it away from the eyes.' });
+put(['brow_shape','lashes'], { title:'Dye brows and lashes 1-2 shades darker', kind:'non-invasive', works:3, safe:4, evidence:'unverified',
+  summary:'Raises contrast so the eye frame looks sharper. The library suggests beard dye; use a product made for eyebrows and lashes instead and patch test first.',
+  risks:'Allergic reaction, and eye injury if dye gets in the eye.' });
+put(['lashes'], { title:'Bimatoprost lash serum (Latisse)', kind:'medical', works:4, safe:3, evidence:'verified',
+  summary:'Prescription serum that lengthens, thickens and darkens lashes by prolonging the growth phase.',
+  risks:'Eye irritation, darkening of the eyelid skin, and rare iris color change.' });
+put(['scleral'], { title:'Redness-relief eye drops', kind:'non-invasive', works:2, safe:3, evidence:'mixed',
+  summary:'Vasoconstrictor drops reduce redness for a brighter sclera. The library says they mostly matter if you have a darker sclera or bright iris. They do not change how much sclera shows.',
+  risks:'Rebound redness with overuse.' });
+put(['canthal_tilt'], { title:'Orbital pushing', kind:'non-invasive', works:1, safe:2, evidence:'unverified',
+  summary:'Pressing the corner of the orbit is claimed to raise the apparent tilt by 1-2 degrees for about 15-20 minutes. It is temporary and the library calls it a fraud.',
+  risks:'Eye irritation; no lasting effect.' });
+put(['canthal_tilt','hooding'], { title:'Tight hat or hoodie pull', kind:'non-invasive', works:1, safe:4, evidence:'unverified',
+  summary:'Pulling the forehead skin back with a snug hat (and hoodie) temporarily gives the look of a higher tilt or more brow-ridge hooding, mostly in photos.',
+  risks:'Headache if too tight.' });
+put(['vermilion'], { title:'Lip massage and resistance training', kind:'non-invasive', works:1, safe:5, evidence:'unverified',
+  summary:'Stretching, flicking and flexing against resistance for a few minutes, claimed to raise blood flow for slightly fuller lips. The library calls it minor.' });
+put(['vermilion'], { title:'Isotretinoin for fuller lips (claimed)', kind:'medical', works:1, safe:2, evidence:'unverified',
+  summary:'The library claims lips look fuller after a drying, inflamed phase. That is a side effect, not a real improvement, and the library marks it disputed.',
+  risks:'Cracked, sore lips plus all isotretinoin risks.' });
+
+/* ===== face engine ===== */
+/* ASTRA // FACE ENGINE: scoring, 3D head, photo scanner, UI. Data lives in face-data.js */
+
+const DEMO = /[?&]demo(=|&|$)/.test(location.search);
+const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const round = (v, d) => { const k = Math.pow(10, d == null ? 1 : d); return Math.round(v * k) / k; };
+const G2 = g => g === 'female' ? 'f' : 'm';
+
+const FX = {}; AREAS.forEach(a => a.factors.forEach(f => { f.area = a.id; FX[f.id] = f; }));
+const labelsFor = (f, g) => Array.isArray(f.labels) ? f.labels : f.labels[G2(g)];
+const idealOf = (f, g) => { const i = f.ideal; return !i ? null : Array.isArray(i) ? i : i[G2(g)]; };
+const viewsOf = f => Array.isArray(f.view) ? f.view : [f.view];
+
+/* ---------- normalise + score ---------- */
+function norm(f, g, raw){
+  let v = raw, c = null;
+  if (raw && typeof raw === 'object' && 'value' in raw) { v = raw.value; c = raw.confidence != null ? raw.confidence : raw.c; }
+  if (v == null || v === '') return null;
+  if (f.type === 'num') { v = Number(v); if (!isFinite(v)) return null; }
+  else if (f.type === 'cat') { const L = Array.isArray(f.opts) ? f.opts : Object.keys(f.opts); const m = L.find(x => x.toLowerCase() === String(v).toLowerCase()); if (!m) return null; v = m; }
+  else if (f.type === 'grade') { const L = labelsFor(f, g); if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < L.length) v = L[v]; const m = L.find(x => x.toLowerCase() === String(v).toLowerCase()); if (!m) return null; v = m; }
+  else v = typeof v === 'number' ? v : String(v).slice(0, 80);
+  return c == null || isNaN(Number(c)) ? { v } : { v, c: Math.max(0, Math.min(1, Number(c))) };
+}
+function evalF(f, g, M){
+  const rec = M[f.id]; if (!rec || rec.v == null) return { state: 'none' };
+  const out = { state: 'info', v: rec.v, c: rec.c };
+  if (f.type === 'info') return out;
+  if (f.type === 'num') {
+    let x = rec.v;
+    if (f.ratio) { const a = M[f.ratio[0]], b = M[f.ratio[1]]; if (!a || !b || !b.v) return Object.assign(out, { state: 'pending', note: 'needs ' + FX[f.ratio[1]].abbr }); x = a.v / b.v; out.x = x; }
+    const id = idealOf(f, g); if (!id) return Object.assign(out, { state: 'pending' });
+    const dev = x < id[0] ? id[0] - x : x > id[1] ? x - id[1] : 0, tol = f.tol || Math.max(id[1] - id[0], Math.abs((id[0] + id[1]) / 2) * .2) || 1;
+    out.score = Math.round(100 * Math.max(0, 1 - dev / tol)); out.side = x < id[0] ? 'below' : x > id[1] ? 'above' : 'in'; out.state = 'scored'; return out;
+  }
+  if (f.type === 'cat') { const s = Array.isArray(f.opts) ? null : f.opts[rec.v]; if (s == null) return Object.assign(out, { state: 'pending' }); out.score = s; out.state = 'scored'; return out; }
+  if (f.type === 'grade') { const L = labelsFor(f, g), i = L.indexOf(String(rec.v)); if (i < 0) return out; out.score = Math.round(100 * (1 - i / (L.length - 1))); out.state = 'scored'; return out; }
+  return out;
+}
+function evalAll(g, M){
+  const per = {}, ar = {}; let ws = 0, tot = 0;
+  AREAS.forEach(a => {
+    let done = 0; const sc = [];
+    a.factors.forEach(f => { const e = evalF(f, g, M); per[f.id] = e; if (e.state !== 'none') done++; if (e.state === 'scored') sc.push(e.score); });
+    const score = sc.length ? sc.reduce((x, y) => x + y, 0) / sc.length : null;
+    ar[a.id] = { done, total: a.factors.length, score, scored: sc.length };
+    if (score != null) { const w = a.w * Math.min(1, sc.length / Math.max(1, Math.ceil(a.factors.length * .4))); ws += w; tot += w * score; }
+  });
+  const score = ws >= .5 ? tot / ws : null;
+  return { per, ar, score, rating: score == null ? null : Math.max(0, Math.min(10, CONFIG.ratingFromScore(score))) };
+}
+const verdict = s => s >= 90 ? ['Ideal', 'v1'] : s >= 75 ? ['Good', 'v2'] : s >= 55 ? ['Fair', 'v3'] : ['Needs work', 'v4'];
+const unitTxt = f => f.unit && f.unit !== 'ratio' ? ' ' + f.unit : '';
+function idealTxt(f, g){
+  if (f.type === 'num') { const i = idealOf(f, g); if (!i) return null; const b = i[0] + ' to ' + i[1] + unitTxt(f); return f.ratio ? FX[f.ratio[0]].abbr + ' / ' + FX[f.ratio[1]].abbr + ' ' + b : b; }
+  if (f.type === 'cat') return Array.isArray(f.opts) ? null : Object.keys(f.opts).filter(k => f.opts[k] >= 90).join(' or ');
+  if (f.type === 'grade') return labelsFor(f, g)[0];
+  return null;
+}
+const valTxt = (f, e) => f.type === 'num' ? round(e.v, 2) + unitTxt(f) + (e.x != null ? '  (ratio ' + round(e.x, 2) + ')' : '') : String(e.v);
+function youAre(f, e){
+  if (e.state === 'scored' && f.type === 'num') return e.side === 'in' ? 'Within ideal' : e.side === 'below' ? 'Below ideal' : 'Above ideal';
+  if (e.state === 'scored') return verdict(e.score)[0];
+  return e.state === 'pending' ? 'Ideal pending' : 'Descriptor (not scored)';
+}
+
+/* ---------- demo values (only with ?demo=1) ---------- */
+function demoValues(g){
+  const M = {};
+  AREAS.forEach(a => a.factors.forEach(f => {
+    let v;
+    if (f.type === 'num') { const id = idealOf(f, g); if (id && !f.ratio) { const mid = (id[0] + id[1]) / 2, tol = f.tol || (id[1] - id[0]) || 1; v = mid + (Math.random() * 2 - 1) * tol * .9; } else v = f.demo[0] + Math.random() * (f.demo[1] - f.demo[0]); }
+    else if (f.type === 'cat') { const L = Array.isArray(f.opts) ? f.opts : Object.keys(f.opts); v = L[Math.floor(Math.random() * L.length)]; }
+    else if (f.type === 'grade') { const L = labelsFor(f, g); v = L[Math.min(L.length - 1, Math.floor(Math.random() * Math.random() * L.length * 1.4))]; }
+    else if (f.opts) v = f.opts[Math.floor(Math.random() * f.opts.length)];
+    else v = f.demo ? round(f.demo[0] + Math.random() * (f.demo[1] - f.demo[0]), 1) : 'recorded';
+    M[f.id] = { value: v, confidence: round(.6 + Math.random() * .35, 2) };
+  }));
+  return M;
+}
+
+/* ---------- css ---------- */
+const CSS = `
+.f-tabs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);margin:0 0 18px;position:relative;overflow:hidden}
+.f-tabs:before{content:"";position:absolute;top:0;bottom:0;left:0;width:33.333%;background:#fff;box-shadow:0 0 24px rgba(255,255,255,.5);transition:transform .45s cubic-bezier(.7,0,.2,1)}
+.f-tabs[data-i="1"]:before{transform:translateX(100%)}.f-tabs[data-i="2"]:before{transform:translateX(200%)}
+.f-tabs button{position:relative;z-index:1;font:inherit;font-family:var(--mono);letter-spacing:.22em;font-size:12px;text-transform:uppercase;padding:14px 4px;background:none;border:0;color:var(--dim);cursor:pointer;transition:color .3s}
+.f-tabs button.on{color:#000}
+.f-wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:900px){.f-wrap{grid-template-columns:1fr}}
+.f-stage{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 42%,rgba(255,255,255,.08),transparent 66%),rgba(0,0,0,.55);height:min(72vh,620px);min-height:440px;overflow:hidden}
+.f-stage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab}
+.f-hsl{position:absolute;inset:0;pointer-events:none}
+.f-hs{position:absolute;left:0;top:0;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:0;background:#ff2442;color:#fff;font:700 15px/28px var(--mono);text-align:center;cursor:pointer;padding:0;pointer-events:auto;transition:opacity .25s;box-shadow:0 0 18px #ff2442;will-change:transform}
+.f-hs:before{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid #ff2442;animation:fpulse 1.4s ease-out infinite}
+@keyframes fpulse{from{transform:scale(1);opacity:.9}to{transform:scale(2.5);opacity:0}}
+.f-hs.ok{background:#fff;color:#000;box-shadow:0 0 18px #fff}.f-hs.ok:before{display:none}
+.f-hs.sel{outline:2px solid #fff;outline-offset:3px}
+.f-hs:after{content:attr(data-n);position:absolute;left:36px;top:50%;transform:translateY(-50%);white-space:nowrap;font:10px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:#fff;background:#000;border:1px solid var(--line);padding:4px 8px;opacity:0;pointer-events:none;transition:.2s}
+.f-hs:hover:after,.f-hs.sel:after{opacity:1}
+.f-hud{position:absolute;left:14px;top:12px;font:10px/1.8 var(--mono);letter-spacing:.22em;color:var(--dim);text-transform:uppercase;pointer-events:none}
+.f-sbtn{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);white-space:nowrap}
+.f-msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;color:var(--dim);font:11px var(--mono);letter-spacing:.2em;text-transform:uppercase}
+.f-panel{display:grid;gap:12px;min-width:0}
+.f-big{font-family:var(--disp);font-size:clamp(26px,4vw,40px);letter-spacing:.08em;text-shadow:0 0 24px rgba(255,255,255,.5);margin:6px 0 2px}
+.f-arow{display:flex;align-items:center;gap:14px;padding:13px 14px;border:1px solid var(--line);background:rgba(255,255,255,.03);cursor:pointer;transition:.25s}
+.f-arow:hover{border-color:#fff;box-shadow:0 0 22px rgba(255,255,255,.16)}
+.f-dot{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;font:700 12px var(--mono);background:#ff2442;color:#fff;box-shadow:0 0 12px #ff2442;animation:bp 1.6s infinite}
+.f-dot.ok{background:#fff;color:#000;box-shadow:0 0 12px #fff;animation:none}
+.f-an{flex:1;min-width:0;font-size:15px}.f-an small{display:block;color:var(--dim);font:10px var(--mono);letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.f-sc{font:12px var(--mono);letter-spacing:.1em}
+.f-row{border:1px solid var(--line);padding:14px 16px;background:rgba(255,255,255,.03)}
+.f-row.miss{border-color:rgba(255,36,66,.45)}
+.f-rh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.f-nm{font-size:15px;font-weight:500}.f-ds{color:var(--dim);font-size:12.5px;margin:6px 0 10px;line-height:1.45}
+.f-vals{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin:8px 0}.f-vals span{display:block;color:var(--dim);font:10px var(--mono);letter-spacing:.18em;text-transform:uppercase;margin-bottom:2px}.f-vals b{font-weight:500}
+.f-bar{height:3px;background:var(--line);margin:8px 0}.f-bar i{display:block;height:100%;background:#fff;box-shadow:0 0 8px #fff}
+.f-chip{display:inline-block;font:10px var(--mono);letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:4px 10px;margin:0 6px 6px 0}
+.f-chip.v1{background:#fff;color:#000}.f-chip.v2{border-color:#fff}.f-chip.v4{border-color:#ff6b7a;color:#ff8c99}.f-chip.bad{border-color:#ff2442;color:#ff8c99}
+.f-fix{margin-top:10px;display:grid;gap:8px;animation:pin .3s}
+.f-fixc{border:1px solid var(--line);padding:12px 14px}.f-fixc.lock{opacity:.6;border-style:dashed}
+.f-mt{display:flex;gap:16px;font:10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 0}.f-mt b{color:#fff;font-weight:400}
+.f-back{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.f-list .f-row{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:12px 14px}
+.f-lr{display:grid;gap:8px;margin-top:12px}
+.f-seg{display:inline-flex;gap:3px;margin:0 8px}.f-seg i{width:14px;height:5px;background:var(--line)}.f-seg i.on{background:#fff;box-shadow:0 0 6px #fff}.f-mt div{display:flex;align-items:center}.f-fs{color:#cfcfcf;font-size:13px;line-height:1.5;margin-top:8px}.f-risk{color:#ff9aa6}.f-src{margin-top:8px;font-size:9px}
+/* scanner */
+.f-scanm .f-sbox{width:min(560px,100%);max-height:96vh;overflow:auto;padding:22px}
+.f-cam{position:relative;aspect-ratio:3/4;max-height:56vh;margin:0 auto;background:#000;border:1px solid var(--line);overflow:hidden}
+.f-cam video,.f-cam img.shot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.f-cam video{transform:scaleX(-1)}
+.f-guide{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.f-cd{position:absolute;inset:0;display:grid;place-items:center;font:700 90px var(--disp);color:#fff;text-shadow:0 0 30px #fff;pointer-events:none}
+.f-thumbs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:14px 0}
+.f-th{aspect-ratio:1;border:1px solid var(--line);background:#000 center/cover;display:grid;place-items:end center;font:9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);cursor:pointer;position:relative}
+.f-th.on{border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.5)}.f-th.got:after{content:"\\2713";position:absolute;top:2px;right:4px;color:#fff;font-size:11px}
+.f-th span{background:rgba(0,0,0,.7);width:100%;text-align:center;padding:2px 0}
+.f-tip{color:#cfcfcf;font-size:14px;margin:10px 0}
+.f-chk{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:#cfcfcf;margin:12px 0;cursor:pointer}.f-chk input{width:18px;height:18px;margin-top:2px;flex:none}
+.f-busy{padding:40px 10px;text-align:center}
+`;
+
+/* ================================================================== */
+function initFace(ctx){
+  const { $, el, B, ICO, toast, showM, closeM } = ctx;
+  const st = { gender: 'male', age: null, uid: null, data: null, area: null, sub: 0, open: {}, sort: 'best', all: false };
+  if (!document.getElementById('f-css')) { const s = document.createElement('style'); s.id = 'f-css'; s.textContent = CSS; document.head.appendChild(s); }
+  const root = ctx.root;
+  let ev = evalAll('male', {});
+  const recompute = () => { ev = evalAll(st.gender, st.data ? st.data.m : {}); };
+
+  /* ---------- 3D head ---------- */
+  const stage = el('div', 'f-stage'), cv = document.createElement('canvas'), hsL = el('div', 'f-hsl'), hud = el('div', 'f-hud');
+  stage.append(cv, hsL, hud);
+  const scanBtn = B('solid f-sbtn', 'Start face scan', 'plus'); stage.append(scanBtn);
+  const ANCH = [['eyes', -.28, .13], ['eyebrows', .31, .34], ['hair', 0, .86, 1.06], ['skin', 0, .62], ['nose', 0, -.19], ['mouth', 0, -.50], ['cheeks', .52, -.06], ['maxilla', -.21, -.37], ['underjaw', .34, -.74]];
+  const hs = {};
+  ANCH.forEach(a => { const area = AREAS.find(x => x.id === a[0]), b = el('button', 'f-hs', '!'); b.type = 'button'; b.dataset.n = area.name; b.setAttribute('aria-label', area.name); b.onclick = () => selectArea(a[0]); hsL.append(b); hs[a[0]] = { b, p: null, n: null }; });
+  let T = null, R = null, scene, cam, grp, rings = [], uni = { uT: { value: 0 } }, rotY = 0, rotX = 0, velY = 0, idleAt = 0, drag = null, visible = false, raf = 0, built = null, t0 = performance.now(), ro = null;
+
+  const loadThree = () => window.THREE ? Promise.resolve(window.THREE) : new Promise((res, rej) => { const s = document.createElement('script'); s.src = THREE_URL; s.onload = () => window.THREE ? res(window.THREE) : rej(); s.onerror = rej; document.head.appendChild(s); });
+  const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+  function buildHead(g){
+    const male = g !== 'female', M = male ? 1 : 0, X = .76, Y = 1, Z = .90, grpN = new T.Group();
+    const dir = (xw, yw) => { const x = xw / X, y = yw / Y; return new T.Vector3(x, y, Math.sqrt(Math.max(.02, 1 - x * x - y * y))); };
+    const F = [], add = (xw, yw, s, a, mir) => { F.push({ d: dir(xw, yw), s, a }); if (mir) F.push({ d: dir(-xw, yw), s, a }); };
+    add(0, .31, .16, .03 + .06 * M); add(.22, .30, .13, .03 + .06 * M, 1);          // brow ridge
+    add(.30, .13, .12, -(.07 + .02 * M), 1);                                          // eye sockets
+    add(0, .60, .30, .03);                                                           // forehead
+    add(0, .10, .07, .10); add(0, -.05, .075, .16 + .03 * M); add(0, -.19, .09, .27 + .05 * M); add(.10, -.23, .065, .13 + .02 * M, 1); // nose
+    add(.52, -.02, .15, .05 + .015 * M, 1); add(.40, -.30, .15, -.03, 1); add(.42, -.18, .16, .03 - .01 * M, 1); // cheeks
+    add(.17, -.34, .11, .035, 1);                                                    // maxilla
+    add(0, -.43, .10, .075 + (1 - M) * .02); add(0, -.545, .105, .09 + (1 - M) * .025); add(0, -.485, .045, -.05); // lips
+    add(0, -.64, .07, -.04); add(0, -.79, .13, .09 + .04 * M);                      // sulcus + chin
+    add(.62, -.50, .15, .01 + .05 * M, 1);                                           // jaw angle
+    F.push({ d: new T.Vector3(1, .03, 0), s: .22, a: .13 }, { d: new T.Vector3(-1, .03, 0), s: .22, a: .13 }); // ears
+    const shape = v => {
+      const taper = 1 - (male ? .16 : .26) * sm(.0, -.85, v.y); let k = 0;
+      for (let i = 0; i < F.length; i++) { const q = F[i], dx = v.x - q.d.x, dy = v.y - q.d.y, dz = v.z - q.d.z; k += q.a * Math.exp(-(dx * dx + dy * dy + dz * dz) / (2 * q.s * q.s)); }
+      const sq = (a, e) => Math.sign(a) * Math.pow(Math.abs(a), e);
+      const yy = v.y < 0 ? -Math.pow(-v.y, .78) * .93 : v.y, ex = male ? .80 : .86;
+      return new T.Vector3(sq(v.x, ex) * X * taper, yy * Y, sq(v.z, .88) * Z).multiplyScalar(1 + k);
+    };
+    const vs = 'varying vec3 vN;varying vec3 vP;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vP=position;vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}';
+    const fs = 'uniform float uT;uniform float uL;uniform float uA;uniform float uR;varying vec3 vN;varying vec3 vP;varying vec3 vV;void main(){float rim=pow(1.0-abs(dot(normalize(vN),normalize(vV))),2.4);float l=abs(fract(vP.y*uL)-.5);float line=1.0-smoothstep(.0,.09,l);float ang=atan(vP.x,vP.z)*uL*.16;float m=1.0-smoothstep(.0,.07,abs(fract(ang)-.5));float band=exp(-pow((vP.y-sin(uT*.8)*1.1)*7.0,2.0));float lam=max(dot(normalize(vN),normalize(vec3(.25,.45,1.0))),0.0);float a=uA+.34*line+.08*m+uR*rim+.32*band+.22*lam*uR;gl_FragColor=vec4(vec3(1.0),clamp(a,0.,1.));}';
+    const mat = (L, A, Rm) => new T.ShaderMaterial({ vertexShader: vs, fragmentShader: fs, transparent: true, uniforms: { uT: uni.uT, uL: { value: L }, uA: { value: A }, uR: { value: Rm == null ? .95 : Rm } } });
+    const sk = new T.SphereGeometry(1, 80, 60), pos = sk.attributes.position, V = new T.Vector3();
+    for (let i = 0; i < pos.count; i++) { V.fromBufferAttribute(pos, i); const p = shape(V); pos.setXYZ(i, p.x, p.y, p.z); }
+    sk.computeVertexNormals(); grpN.add(new T.Mesh(sk, mat(26, .05)));
+    // hair shell
+    const hg = new T.SphereGeometry(1, 72, 54), hp = hg.attributes.position;
+    for (let i = 0; i < hp.count; i++) { V.fromBufferAttribute(hp, i); const p = shape(V).multiplyScalar(1.05); hp.setXYZ(i, p.x, p.y + .02, p.z); }
+    const ix = hg.index.array, keep = [], thr = (x, z) => .60 - .52 * sm(.5, .74, Math.abs(x)) - (male ? .9 : 1.45) * sm(.1, -.5, z);
+    for (let i = 0; i < ix.length; i += 3) { const a = ix[i], b = ix[i + 1], c = ix[i + 2]; if ((hp.getY(a) + hp.getY(b) + hp.getY(c)) / 3 > thr((hp.getX(a) + hp.getX(b) + hp.getX(c)) / 3, (hp.getZ(a) + hp.getZ(b) + hp.getZ(c)) / 3)) keep.push(a, b, c); }
+    hg.setIndex(keep); hg.computeVertexNormals(); grpN.add(new T.Mesh(hg, mat(34, 0, .35)));
+    // neck
+    const nk = new T.Mesh(new T.CylinderGeometry(.30, .36, .9, 36, 14, true), mat(26, .02, .6)); nk.position.y = -1.18; grpN.add(nk);
+    // eyes
+    const wm = o => new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: o });
+    [-1, 1].forEach(s => {
+      const p = shape(dir(s * .30, .13)), eye = new T.Mesh(new T.SphereGeometry(.07, 16, 12), wm(.2)); eye.position.copy(p).add(new T.Vector3(0, 0, -.03)); grpN.add(eye);
+      const ring = new T.Mesh(new T.RingGeometry(.026, .042, 24), wm(.95)); ring.position.copy(p).add(new T.Vector3(0, 0, .04)); grpN.add(ring);
+      const pts = []; for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push(shape(dir(s * (.12 + .34 * t), .315 + (male ? .012 : .04) * Math.sin(t * Math.PI * .9))).multiplyScalar(1.012)); }
+      grpN.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 20, male ? .012 : .008, 6), wm(.9)));
+    });
+    // base rings
+    rings = [1.0, 1.28].map((r, i) => { const m = new T.Mesh(new T.RingGeometry(r, r + .012, 80), wm(i ? .25 : .5)); m.rotation.x = -Math.PI / 2; m.position.y = -1.62; grpN.add(m); return m; });
+    ANCH.forEach(a => { const p = shape(dir(a[1], a[2])).multiplyScalar(a[3] || 1); hs[a[0]].p = p; hs[a[0]].n = p.clone().normalize(); });
+    return grpN;
+  }
+
+  function stageMsg(t){ let m = stage.querySelector('.f-msg'); if (!m) { m = el('div', 'f-msg'); stage.append(m); } m.textContent = t; hsL.style.display = 'none'; }
+  async function mount(){
+    if (!T) { try { T = await loadThree(); } catch (e) { stageMsg('3D view needs an internet connection'); return; } }
+    try {
+      if (!R) {
+        R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); R.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+        scene = new T.Scene(); cam = new T.PerspectiveCamera(32, 1, .1, 50); cam.position.set(0, -.05, 5.1); cam.lookAt(0, -.1, 0);
+        cv.addEventListener('pointerdown', e => { drag = { x: e.clientX }; velY = 0; cv.setPointerCapture(e.pointerId); });
+        cv.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x; drag.x = e.clientX; rotY += dx * .008; velY = dx * .002; idleAt = performance.now(); });
+        const up = () => { drag = null; idleAt = performance.now(); }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+        ro = new ResizeObserver(resize); ro.observe(stage);
+      }
+      if (built !== st.gender) { if (grp) { scene.remove(grp); grp.traverse(o => { if (o.geometry) o.geometry.dispose(); }); } grp = buildHead(st.gender); scene.add(grp); built = st.gender; }
+      resize(); if (!raf) raf = requestAnimationFrame(frame);
+    } catch (e) { console.error(e); stageMsg('3D view is not supported on this device'); }
+  }
+  function resize(){ if (!R) return; const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+  function frame(now){
+    raf = requestAnimationFrame(frame); if (!visible || !R || !grp) return;
+    const t = (now - t0) / 1000;
+    if (!drag) { if (now - idleAt > 1800) { rotY += (Math.sin(t * .35) * .6 - rotY) * .02; rotX += (0 - rotX) * .03; } rotY += velY; velY *= .92; }
+    grp.rotation.set(rotX, rotY, 0); uni.uT.value = t; rings.forEach((r, i) => r.rotation.z += i ? -.003 : .002);
+    grp.updateMatrixWorld(); R.render(scene, cam);
+    const w = stage.clientWidth, h = stage.clientHeight;
+    for (const id in hs) { const a = hs[id]; if (!a.p) continue; const v = a.p.clone().applyMatrix4(grp.matrixWorld), n = a.n.clone().transformDirection(grp.matrixWorld), vis = n.dot(cam.position.clone().sub(v).normalize()) > .22; v.project(cam); a.b.style.transform = 'translate(' + ((v.x * .5 + .5) * w) + 'px,' + ((-v.y * .5 + .5) * h) + 'px)'; a.b.style.opacity = vis ? 1 : 0; a.b.style.pointerEvents = vis ? 'auto' : 'none'; }
+  }
+
+  /* ---------- panel ---------- */
+  const panel = el('div', 'f-panel'), tabs = el('div', 'f-tabs'), faceEl = el('div', 'f-wrap'), phEl = el('div', 'card static hide');
+  faceEl.append(stage, panel);
+  ['Face', 'Body', 'Mind'].forEach((n, i) => { const b = el('button', null, n); b.type = 'button'; b.onclick = () => setSub(i); tabs.append(b); });
+  root.append(tabs, faceEl, phEl);
+  function setSub(i){
+    st.sub = i; tabs.dataset.i = i; [...tabs.children].forEach((b, k) => b.classList.toggle('on', k === i));
+    faceEl.classList.toggle('hide', i !== 0); phEl.classList.toggle('hide', i === 0);
+    if (i) { phEl.replaceChildren(el('div', 'mono', (i === 1 ? 'Body' : 'Mind') + ' // coming next'), el('p', 'dim', 'Face comes first. This section is built after the face system.')); phEl.style.textAlign = 'center'; phEl.style.padding = '60px 20px'; }
+    else if (visible) mount();
+  }
+  const aName = id => AREAS.find(a => a.id === id).name;
+  function selectArea(id){ st.area = id; renderPanel(); panel.scrollIntoView && innerWidth < 900 && panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function renderHs(){ AREAS.forEach(a => { const r = ev.ar[a.id], b = hs[a.id].b, ok = r.done === r.total; b.classList.toggle('ok', ok); b.textContent = ok ? '\u2713' : '!'; b.classList.toggle('sel', st.area === a.id); }); hud.innerHTML = 'SUBJECT // ' + (st.gender === 'female' ? 'FEMALE' : 'MALE') + '<br>DRAG TO ROTATE'; scanBtn.lastChild.textContent = st.data ? 'Rescan face' : 'Start face scan'; }
+  function render(){ recompute(); renderHs(); renderPanel(); }
+
+  function renderPanel(){
+    panel.replaceChildren(st.area ? areaView(st.area) : overview());
+  }
+  function overview(){
+    const w = el('div', 'f-panel'), c = el('div', 'card static'), done = AREAS.filter(a => ev.ar[a.id].done === ev.ar[a.id].total).length, ti = ev.rating != null ? ctx.tierOf(ev.rating, st.gender) : null;
+    c.append(el('div', 'n', 'FACE ANALYSIS'));
+    if (ev.rating != null) { c.append(el('div', 'f-big', round(ev.rating, 1) + ' / 10'), el('div', 'dim', 'Tier ' + ti.code + ' \u00b7 ' + ti.full + (st.data && st.data.demo ? ' \u00b7 DEMO DATA' : ''))); }
+    else c.append(el('div', 'f-big', done + ' / ' + AREAS.length), el('div', 'dim', st.data ? 'Areas fully rated. Missing photos leave some factors unrated.' : 'Areas rated. Scan your face with photos to fill every red marker.'));
+    const row = el('div', 'prow'); row.style.marginTop = '14px'; const sb = B('solid', st.data ? 'Rescan' : 'Start face scan', 'plus'); sb.onclick = openScan; row.append(sb); c.append(row); w.append(c);
+    AREAS.forEach(a => {
+      const r = ev.ar[a.id], ok = r.done === r.total, row = el('div', 'f-arow'), d = el('div', 'f-dot' + (ok ? ' ok' : ''), ok ? '\u2713' : '!'), n = el('div', 'f-an', a.name);
+      n.append(el('small', null, r.done + ' / ' + r.total + ' factors' + (r.score != null ? ' \u00b7 score ' + Math.round(r.score) : '')));
+      row.append(d, n, el('div', 'f-sc', r.score != null ? verdict(r.score)[0] : 'Not rated')); row.onclick = () => selectArea(a.id); w.append(row);
+    });
+    return w;
+  }
+  function areaView(id){
+    const a = AREAS.find(x => x.id === id), r = ev.ar[id], w = el('div', 'f-panel'), bk = el('div', 'f-back'), bb = el('button', 'ibtn'); bb.type = 'button'; bb.innerHTML = ICO('back'); bb.onclick = () => { st.area = null; render(); };
+    bk.append(bb, el('div', null)); bk.lastChild.append(el('div', 'mono', 'Face area'), el('h3', 'ph', a.name)); bk.lastChild.lastChild.style.margin = '2px 0 0'; w.append(bk);
+    const s = el('div', 'card static'); s.append(el('div', 'n', 'STATUS'), el('div', 'f-big', r.done + ' / ' + r.total), el('div', 'dim', r.score != null ? 'Area score ' + Math.round(r.score) + ' / 100 \u00b7 ' + verdict(r.score)[0] : 'Not rated yet. Rate every factor with a photo scan, then fixes unlock.'));
+    const need = new Set(); a.factors.forEach(f => { if (ev.per[f.id].state === 'none') viewsOf(f).forEach(v => need.add(v)); });
+    if (need.size) { const nw = el('div'); nw.style.marginTop = '10px'; need.forEach(v => nw.append(el('span', 'f-chip bad', 'photo: ' + VIEWS.find(x => x.id === v).name))); s.append(nw); }
+    w.append(s); a.factors.forEach(f => w.append(factorRow(f))); return w;
+  }
+  function factorRow(f){
+    const e = ev.per[f.id], r = el('div', 'f-row' + (e.state === 'none' ? ' miss' : '')), h = el('div', 'f-rh');
+    h.append(el('div', 'f-nm', f.name), el('div', 'mono', f.abbr)); r.append(h, el('div', 'f-ds', f.desc));
+    if (e.state === 'none') { const v = viewsOf(f).map(x => VIEWS.find(y => y.id === x).name).join(' + '); r.append(el('span', 'f-chip bad', '! Not rated'), el('span', 'f-chip', 'needs: ' + v)); return r; }
+    const it = idealTxt(f, st.gender), vl = el('div', 'f-vals'), mk = (k, v) => { const d = el('div'); d.append(el('span', null, k), el('b', null, v)); return d; };
+    vl.append(mk('You', valTxt(f, e)), mk('Ideal', it || (f.type === 'info' ? 'not scored' : 'pending')), mk('Status', youAre(f, e))); r.append(vl);
+    if (e.state === 'scored') { const bar = el('div', 'f-bar'), i = document.createElement('i'); i.style.width = e.score + '%'; bar.append(i); const vd = verdict(e.score); r.append(bar, el('span', 'f-chip ' + vd[1], vd[0] + ' \u00b7 ' + e.score)); }
+    if (e.state === 'scored') r.append(el('span', 'f-chip', 'ideal source: ' + SRC[f.src || 'app']));
+    if (e.c != null) r.append(el('span', 'f-chip', 'confidence ' + Math.round(e.c * 100) + '%'));
+    const fb = B('ghost sm', st.open[f.id] ? 'Hide fixes' : 'How to fix', null); fb.onclick = () => { st.open[f.id] = !st.open[f.id]; renderPanel(); }; fb.style.marginTop = '6px'; r.append(fb);
+    if (st.open[f.id]) r.append(fixList(f));
+    return r;
+  }
+  const seg = (n, cls) => { const s = el('span', 'f-seg ' + (cls || '')); for (let i = 0; i < 5; i++) s.append(el('i', i < n ? 'on' : '')); return s; };
+  const EV = { verified: ['Verified', 'v1'], mixed: ['Mixed evidence', 'v3'], unverified: ['Unverified claim', 'bad'] };
+  const INV = ['procedure', 'surgical', 'medical'];
+  const rankFix = x => x.works * 2 + x.safe + (x.evidence === 'verified' ? 3 : x.evidence === 'mixed' ? 1 : 0);
+  function fixList(f){
+    const box = el('div', 'f-fix'), L = (FIXES[f.id] || []).slice().sort((p, q) => rankFix(q) - rankFix(p));
+    if (!L.length) { box.append(el('div', 'dim', 'Fix guides for this factor are being added. Each one will show how well it works, how safe it is, and whether the claim is verified.')); return box; }
+    box.append(el('div', 'dim', 'Sorted by how well they work, how safe they are and how well proven. "Unverified claim" means people say it works but it has not been verified.'));
+    L.forEach(x => {
+      const min = x.minAge != null ? x.minAge : (INV.includes(x.kind) ? CONFIG.minAgeInvasive : 0), lock = min && (st.age == null || st.age < min), c = el('div', 'f-fixc' + (lock ? ' lock' : ''));
+      if (lock) { c.append(el('div', 'mono', 'Locked'), el('div', 'dim', 'Procedures, surgery and prescription drugs are only shown to users aged ' + min + ' and over.')); box.append(c); return; }
+      const ev = EV[x.evidence] || EV.unverified;
+      c.append(el('div', 'f-nm', x.title), el('span', 'f-chip', x.kind), el('span', 'f-chip ' + ev[1], ev[0]));
+      const mt = el('div', 'f-mt'); [['Works', x.works], ['Safe', x.safe]].forEach(m => { const s = el('div'); s.append(el('span', null, m[0]), seg(m[1]), el('b', null, m[1] + '/5')); mt.append(s); }); c.append(mt);
+      if (x.summary) c.append(el('div', 'f-fs', x.summary)); if (x.risks) c.append(el('div', 'f-fs f-risk', 'Risks: ' + x.risks)); if (x.source) c.append(el('div', 'mono f-src', 'Source: ' + x.source));
+      box.append(c);
+    });
+    return box;
+  }
+
+  /* ---------- profile list: best -> worst -> ideal ---------- */
+  function listCard(){
+    const c = el('div', 'card static f-list'); c.append(el('div', 'n', 'FACE ANALYSIS // ALL FACTORS'));
+    if (!st.data) { c.append(el('p', 'dim', 'No scan yet. Scan your face and every factor shows here, ranked from best to worst against the ideal.')); const b = B('solid', 'Open face scan', 'plus'); b.onclick = () => ctx.goHome(); c.append(b); return c; }
+    recompute(); const sc = [], other = [];
+    AREAS.forEach(a => a.factors.forEach(f => { const e = ev.per[f.id]; if (e.state === 'scored') sc.push([f, e, a]); else if (e.state !== 'none') other.push([f, e, a]); }));
+    sc.sort((x, y) => st.sort === 'best' ? y[1].score - x[1].score : x[1].score - y[1].score);
+    const top = el('div', 'prow'); top.style.justifyContent = 'space-between';
+    const l = el('div'); l.append(el('div', 'f-big', ev.rating != null ? round(ev.rating, 1) + ' / 10' : '--'), el('div', 'dim', (ev.rating != null ? 'Tier ' + ctx.tierOf(ev.rating, st.gender).code : 'Not enough rated areas for a tier') + (st.data.demo ? ' \u00b7 DEMO DATA' : '')));
+    const sb = B('ghost sm', st.sort === 'best' ? 'Best first' : 'Worst first', null); sb.onclick = () => { st.sort = st.sort === 'best' ? 'worst' : 'best'; ctx.onChange(); }; top.append(l, sb); c.append(top);
+    const list = el('div', 'f-lr');
+    (st.all ? sc : sc.slice(0, 8)).forEach(x => { const f = x[0], e = x[1], r = el('div', 'f-row'), vd = verdict(e.score); r.append(el('div', null), el('div', 'f-sc', e.score)); r.firstChild.append(el('div', 'f-nm', f.name), el('div', 'dim', x[2].name + ' \u00b7 you ' + valTxt(f, e) + ' \u00b7 ideal ' + (idealTxt(f, st.gender) || 'pending'))); const bar = el('div', 'f-bar'), i = document.createElement('i'); i.style.width = e.score + '%'; bar.append(i); bar.style.gridColumn = '1 / -1'; r.append(bar); const ch = el('span', 'f-chip ' + vd[1], vd[0]); ch.style.gridColumn = '1 / -1'; r.append(ch); list.append(r); });
+    c.append(list);
+    if (sc.length > 8) { const m = B('ghost sm', st.all ? 'Show top 8 only' : 'Show all ' + sc.length + ' factors', null); m.style.marginTop = '12px'; m.onclick = () => { st.all = !st.all; ctx.onChange(); }; c.append(m); }
+    if (other.length) { const d = document.createElement('details'); d.style.marginTop = '14px'; const s = document.createElement('summary'); s.textContent = 'Measured but not scored (' + other.length + ')'; s.className = 'mono'; s.style.cursor = 'pointer'; d.append(s); other.forEach(x => { const r = el('div', 'f-row'); r.style.marginTop = '8px'; r.append(el('div', 'f-nm', x[0].name), el('div', 'dim', x[2].name + ' \u00b7 ' + valTxt(x[0], x[1]) + ' \u00b7 ' + youAre(x[0], x[1]))); d.append(r); }); c.append(d); }
+    const del = B('ghost sm', 'Delete my face data', null); del.style.marginTop = '16px'; del.onclick = async () => { if (!confirm('Delete all stored face measurements and your rating?')) return; try { await ctx.store.clear(); api.setData(null); toast('Face data deleted'); } catch (e) { toast('Could not delete'); } }; c.append(del);
+    return c;
+  }
+
+  /* ---------- scanner ---------- */
+  const sc = { i: 0, shots: {}, stream: null, busy: false, camOk: false };
+  let modal = null, vid, shot, cd, guide, tipEl, ttl, chips, btnRow, thumbs, finalBox, chk, goBtn, camBox, fileIn;
+  const guideSvg = v => {
+    const prof = v === 'right' || v === 'left';
+    return '<svg class="f-guide" viewBox="0 0 100 133" preserveAspectRatio="none" fill="none" stroke="#fff" stroke-width=".5" stroke-dasharray="2 1.5" opacity=".8">' +
+      (prof ? '<path d="M' + (v === 'right' ? '62' : '38') + ' 20 C' + (v === 'right' ? '84 24 84 60 74 72 C70 84 64 96 54 106' : '16 24 16 60 26 72 C30 84 36 96 46 106') + '"/><line x1="10" y1="52" x2="90" y2="52"/><line x1="50" y1="14" x2="50" y2="118"/>'
+        : '<ellipse cx="50" cy="62" rx="27" ry="38"/><line x1="50" y1="14" x2="50" y2="118"/><line x1="14" y1="52" x2="86" y2="52"/><line x1="14" y1="82" x2="86" y2="82"/>') + '</svg>';
+  };
+  function buildScan(){
+    modal = el('div', 'modal hide f-scanm'); modal.id = 'mScan';
+    const box = el('div', 'glowb f-sbox'); modal.append(box);
+    const hd = el('div', 'prow'); hd.style.justifyContent = 'space-between'; hd.append(el('div', 'mono', '// Face scan')); const x = el('button', 'ibtn'); x.type = 'button'; x.textContent = '\u2715'; x.onclick = closeScan; hd.append(x); box.append(hd);
+    ttl = el('h3', 'ph'); tipEl = el('p', 'f-tip'); camBox = el('div', 'f-cam'); vid = document.createElement('video'); vid.playsInline = true; vid.muted = true; vid.autoplay = true;
+    shot = document.createElement('img'); shot.className = 'shot hide'; cd = el('div', 'f-cd'); guide = el('div'); guide.style.cssText = 'position:absolute;inset:0;pointer-events:none';
+    camBox.append(vid, shot, guide, cd); chips = el('div'); chips.style.marginTop = '10px'; btnRow = el('div', 'prow'); btnRow.style.cssText = 'justify-content:center;margin-top:12px'; thumbs = el('div', 'f-thumbs');
+    fileIn = document.createElement('input'); fileIn.type = 'file'; fileIn.accept = 'image/*'; fileIn.className = 'hide'; fileIn.onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const bm = await createImageBitmap(f); await keep(frameCanvas(bm)); } catch (er) { toast('Could not read that image'); } };
+    finalBox = el('div', 'hide'); const lb = el('label', 'f-chk'); chk = document.createElement('input'); chk.type = 'checkbox'; lb.append(chk, el('span', null, 'I agree to a biometric analysis of these photos. They are used only to produce this scan and are never saved to my account; only the resulting measurements are stored.')); goBtn = B('solid', 'Analyze my face', null); goBtn.style.width = '100%'; goBtn.onclick = analyze; finalBox.append(lb, goBtn);
+    box.append(ttl, tipEl, camBox, chips, btnRow, thumbs, fileIn, finalBox); ($('app') || document.body).append(modal);
+  }
+  function drawThumbs(){
+    thumbs.replaceChildren(...VIEWS.map((v, i) => { const t = el('div', 'f-th' + (i === sc.i ? ' on' : '') + (sc.shots[v.id] ? ' got' : '')); if (sc.shots[v.id]) t.style.backgroundImage = 'url(' + sc.shots[v.id].url + ')'; t.append(el('span', null, v.name.split(' ')[0])); t.onclick = () => { if (!sc.busy) { sc.i = i; scanUI(); } }; return t; }));
+  }
+  function scanUI(){
+    const v = VIEWS[sc.i], got = sc.shots[v.id]; ttl.textContent = (sc.i + 1) + ' / ' + VIEWS.length + '  ' + v.name + (v.req ? '' : ' (recommended)'); tipEl.textContent = v.tip;
+    guide.innerHTML = guideSvg(v.id); shot.classList.toggle('hide', !got); if (got) shot.src = got.url; vid.classList.toggle('hide', !!got);
+    chips.replaceChildren(); if (got) { const q = got.q; chips.append(el('span', 'f-chip ' + (q.lum < 60 || q.lum > 205 ? 'bad' : 'v2'), q.lum < 60 ? 'Too dark' : q.lum > 205 ? 'Too bright' : 'Light OK'), el('span', 'f-chip ' + (q.sharp < 25 ? 'bad' : 'v2'), q.sharp < 25 ? 'Blurry, retake' : 'Sharp'), el('span', 'f-chip ' + (Math.min(q.w, q.h) < 600 ? 'bad' : 'v2'), q.w + 'x' + q.h)); }
+    btnRow.replaceChildren();
+    if (!got) { if (sc.camOk) { const c = B('solid', 'Capture', 'plus'); c.onclick = capture; btnRow.append(c); } const u = B('ghost', 'Upload photo', null); u.onclick = () => fileIn.click(); btnRow.append(u); if (!sc.camOk) chips.append(el('span', 'f-chip', 'Camera unavailable, upload instead')); }
+    else { const r = B('ghost', 'Retake', null); r.onclick = () => { delete sc.shots[v.id]; scanUI(); }; btnRow.append(r); if (sc.i < VIEWS.length - 1) { const n = B('solid', 'Next', null); n.onclick = () => { sc.i++; scanUI(); }; btnRow.append(n); } }
+    drawThumbs(); const need = VIEWS.filter(x => x.req && !sc.shots[x.id]).length; finalBox.classList.toggle('hide', need > 0); if (need) { chips.append(el('span', 'f-chip', 'required left: ' + need)); }
+  }
+  async function startCam(){
+    stopCam(); sc.camOk = false; if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    try { sc.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }); vid.srcObject = sc.stream; await vid.play().catch(() => { }); sc.camOk = true; } catch (e) { sc.camOk = false; }
+  }
+  function stopCam(){ if (sc.stream) sc.stream.getTracks().forEach(t => t.stop()); sc.stream = null; }
+  function frameCanvas(s){ const w0 = s.videoWidth || s.naturalWidth || s.width, h0 = s.videoHeight || s.naturalHeight || s.height, k = Math.min(1, 1600 / Math.max(w0, h0)), c = document.createElement('canvas'); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k); c.getContext('2d').drawImage(s, 0, 0, c.width, c.height); return c; }
+  function quality(c){
+    const w = 256, h = Math.max(3, Math.round(c.height * w / c.width)), s = document.createElement('canvas'); s.width = w; s.height = h; const x = s.getContext('2d'); x.drawImage(c, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data, g = new Float32Array(w * h); let sum = 0; for (let i = 0; i < w * h; i++) { const v = .299 * d[i * 4] + .587 * d[i * 4 + 1] + .114 * d[i * 4 + 2]; g[i] = v; sum += v; }
+    let m = 0, m2 = 0, n = 0; for (let y = 1; y < h - 1; y++) for (let xx = 1; xx < w - 1; xx++) { const i = y * w + xx, l = 4 * g[i] - g[i - 1] - g[i + 1] - g[i - w] - g[i + w]; m += l; m2 += l * l; n++; }
+    return { lum: sum / (w * h), sharp: m2 / n - (m / n) * (m / n), w: c.width, h: c.height };
+  }
+  async function keep(c){
+    const v = VIEWS[sc.i], q = quality(c), blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .92)); if (sc.shots[v.id]) URL.revokeObjectURL(sc.shots[v.id].url);
+    sc.shots[v.id] = { blob, url: URL.createObjectURL(blob), q }; scanUI();
+  }
+  async function capture(){
+    if (sc.busy) return; sc.busy = true; const n = DEMO ? 1 : 3;
+    for (let i = n; i > 0; i--) { cd.textContent = i; await sleep(DEMO ? 120 : 800); } cd.textContent = '';
+    const fr = []; for (let i = 0; i < 3; i++) { fr.push(frameCanvas(vid)); await sleep(180); }
+    const best = fr.map(c => ({ c, q: quality(c) })).sort((a, b) => b.q.sharp - a.q.sharp)[0]; sc.busy = false; await keep(best.c);
+  }
+  const toDataURL = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
+  async function analyze(){
+    if (!chk.checked) { toast('Please tick the consent box'); return; }
+    sc.busy = true; goBtn.disabled = true; goBtn.textContent = 'Analyzing...';
+    try {
+      const views = {}; for (const id in sc.shots) views[id] = await toDataURL(sc.shots[id].blob);
+      const schema = []; AREAS.forEach(a => a.factors.forEach(f => schema.push({ id: f.id, name: f.name, area: a.id, type: f.type, unit: f.unit || null, options: f.type === 'cat' ? (Array.isArray(f.opts) ? f.opts : Object.keys(f.opts)) : f.type === 'grade' ? labelsFor(f, st.gender) : f.opts || null, views: viewsOf(f), description: f.desc })));
+      const payload = { gender: st.gender, age: st.age, scale: 'iris', views, schema };
+      let res;
+      if (typeof window.ASTRA_ANALYZER === 'function') res = await window.ASTRA_ANALYZER(payload);
+      else if (CONFIG.aiEndpoint) { const r = await fetch(CONFIG.aiEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await ctx.token() }, body: JSON.stringify(payload) }); if (!r.ok) throw new Error('ai-' + r.status); res = await r.json(); }
+      else if (DEMO) res = { measurements: demoValues(st.gender) };
+      else { const e = new Error('not-connected'); e.nc = true; throw e; }
+      const raw = res.measurements || res, m = {}; AREAS.forEach(a => a.factors.forEach(f => { const n = norm(f, st.gender, raw[f.id]); if (n) m[f.id] = n; }));
+      if (!Object.keys(m).length) throw new Error('empty');
+      const data = { m, at: Date.now(), views: Object.keys(sc.shots), scale: 'iris' }; if (DEMO) data.demo = true;
+      st.data = data; recompute();
+      if (!DEMO) await ctx.store.save(JSON.parse(JSON.stringify(data)), ev.rating, ev.score != null ? Math.round(ev.score) : null);
+      closeScan(); render(); ctx.onChange(); toast(DEMO ? 'Demo scan (not saved)' : 'Scan complete');
+    } catch (e) {
+      console.error(e);
+      if (e.nc) { finalBox.replaceChildren(el('div', 'mono', 'AI scanner not connected'), el('p', 'dim', 'Your photos stayed on this device and were not sent anywhere. Connect your AI in face-data.js (aiEndpoint) or set window.ASTRA_ANALYZER, then scan again.')); }
+      else toast('Scan failed. Try again.');
+      goBtn.disabled = false; goBtn.textContent = 'Analyze my face';
+    }
+    sc.busy = false;
+  }
+  async function openScan(){
+    Object.values(sc.shots).forEach(s => URL.revokeObjectURL(s.url)); sc.shots = {}; sc.i = 0; sc.busy = false;
+    if (modal) modal.remove(); buildScan(); showM('mScan'); scanUI(); await startCam(); scanUI();
+  }
+  function closeScan(){ stopCam(); if (modal) modal.classList.add('hide'); Object.values(sc.shots).forEach(s => URL.revokeObjectURL(s.url)); sc.shots = {}; }
+  scanBtn.onclick = openScan;
+
+  /* ---------- api ---------- */
+  const api = {
+    setUser(u){ const g = u.gender === 'female' ? 'female' : 'male', ch = g !== st.gender; Object.assign(st, { uid: u.uid, gender: g, age: u.age }); if (ch && visible && T) mount(); render(); },
+    setData(d){ st.data = d && d.m ? d : null; render(); ctx.onChange(); },
+    reset(){ st.data = null; st.area = null; st.open = {}; closeScan(); render(); },
+    rating(){ recompute(); return st.data ? ev.rating : null; },
+    listCard,
+    show(){ visible = true; mount(); },
+    hide(){ visible = false; },
+    openScan
+  };
+  api.rot = (y, x) => { rotY = y; rotX = x || 0; velY = 0; idleAt = performance.now() + 1e9; };
+  if (DEMO) window.__face = api;
+  setSub(0); render();
+  return api;
+}
+
+return initFace;
+})();
+
 const app = initializeApp({
   apiKey: "AIzaSyC6KYU2DlrP482ASiHOP-A4QRQxFtKO2Ao",
   authDomain: "astra-looksmaxxingguide.firebaseapp.com",
@@ -927,10 +1640,16 @@ const faceStore = {
   save: async (data, rating, score) => { await setDoc(doc(db, 'users', me, 'data', 'face'), data); await updateDoc(doc(db, 'profiles', me), { rating, faceScore: score, scannedAt: serverTimestamp() }); },
   clear: async () => { await deleteDoc(doc(db, 'users', me, 'data', 'face')); await updateDoc(doc(db, 'profiles', me), { rating: null, faceScore: null }); }
 };
-const FACE = initFace({ root: $('home'), $, el, B, ICO, toast, showM, closeM, store: faceStore,
+let FACE;
+try {
+  FACE = initFace({ root: $('home'), $, el, B, ICO, toast, showM, closeM, store: faceStore,
   token: () => auth.currentUser.getIdToken(),
   tierOf: (r, g) => { const t = tierInfo({ rating: r, gender: g }); return { code: t.code, full: t.full }; },
   onChange: () => renderProfile(), goHome: () => tab('home') });
+} catch (e) {
+  console.error(e); if (window.astraErr) window.astraErr('Face module: ' + e.message);
+  FACE = { setUser(){}, setData(){}, reset(){}, rating(){ return null; }, listCard(){ return el('div'); }, show(){}, hide(){}, openScan(){} };
+}
 
 function avatar(photo, size){
   const ok = typeof photo === 'string' && photo.startsWith('data:image/jpeg;base64,');
@@ -983,6 +1702,7 @@ function codeCard(p){
 }
 function pfError(e){
   const c = el('div', 'card static'), r = B('solid', 'Try again', null);
+  r.style.marginTop = '14px';
   r.onclick = () => auth.currentUser && startApp(auth.currentUser);
   c.append(el('div', 'n', 'PROFILE // COULD NOT LOAD'), el('p', null, 'Your profile could not be loaded.'),
     el('p', 'dim', 'Code: ' + ((e && e.code) || (e && e.message) || 'unknown') + ((e && e.code) === 'permission-denied' ? '. Publish the rules from firestore.rules in Firebase, then try again.' : '')), r);
@@ -1162,6 +1882,8 @@ async function startApp(user){
   tab('profile');
 }
 
+
+window.__astraOK = true;
 </script>
 </body>
 </html>

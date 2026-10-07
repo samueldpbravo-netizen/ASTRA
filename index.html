@@ -1091,10 +1091,10 @@ const CSS = `
 .f-tabs button.on{color:#000}
 .f-wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
 @media(max-width:900px){.f-wrap{grid-template-columns:1fr}}
-.f-stage{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 42%,rgba(255,255,255,.08),transparent 66%),rgba(0,0,0,.55);height:min(72vh,620px);min-height:440px;overflow:hidden}
+.f-stage{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 38%,#242424,#050505 78%);height:min(72vh,620px);min-height:440px;overflow:hidden}
 .f-stage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab}
 .f-hsl{position:absolute;inset:0;pointer-events:none}
-.f-hs{position:absolute;left:0;top:0;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:0;background:#ff2442;color:#fff;font:700 15px/28px var(--mono);text-align:center;cursor:pointer;padding:0;pointer-events:auto;transition:opacity .25s;box-shadow:0 0 18px #ff2442;will-change:transform}
+.f-hs{position:absolute;left:0;top:0;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:0;background:#ff2442;color:#fff;font:700 13px/22px var(--mono);text-align:center;cursor:pointer;padding:0;pointer-events:auto;transition:opacity .25s;box-shadow:0 0 18px #ff2442;will-change:transform}
 .f-hs:before{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid #ff2442;animation:fpulse 1.4s ease-out infinite}
 @keyframes fpulse{from{transform:scale(1);opacity:.9}to{transform:scale(2.5);opacity:0}}
 .f-hs.ok{background:#fff;color:#000;box-shadow:0 0 18px #fff}.f-hs.ok:before{display:none}
@@ -1156,60 +1156,99 @@ function initFace(ctx){
   const stage = el('div', 'f-stage'), cv = document.createElement('canvas'), hsL = el('div', 'f-hsl'), hud = el('div', 'f-hud');
   stage.append(cv, hsL, hud);
   const scanBtn = B('solid f-sbtn', 'Start face scan', 'plus'); stage.append(scanBtn);
-  const ANCH = [['eyes', -.28, .13], ['eyebrows', .31, .34], ['hair', 0, .86, 1.06], ['skin', 0, .62], ['nose', 0, -.19], ['mouth', 0, -.50], ['cheeks', .52, -.06], ['maxilla', -.21, -.37], ['underjaw', .34, -.74]];
+  const ANCH = [['eyes', -.30, .10], ['eyebrows', .33, .27], ['hair', 0, .84, 1], ['skin', 0, .50], ['nose', 0, -.22], ['mouth', 0, -.60], ['cheeks', .54, -.12], ['maxilla', -.23, -.44], ['underjaw', .36, -.86]];
   const hs = {};
   ANCH.forEach(a => { const area = AREAS.find(x => x.id === a[0]), b = el('button', 'f-hs', '!'); b.type = 'button'; b.dataset.n = area.name; b.setAttribute('aria-label', area.name); b.onclick = () => selectArea(a[0]); hsL.append(b); hs[a[0]] = { b, p: null, n: null }; });
-  let T = null, R = null, scene, cam, grp, rings = [], uni = { uT: { value: 0 } }, rotY = 0, rotX = 0, velY = 0, idleAt = 0, drag = null, visible = false, raf = 0, built = null, t0 = performance.now(), ro = null;
+  let paused = false, T = null, R = null, scene, cam, grp, rings = [], uni = { uT: { value: 0 } }, rotY = 0, rotX = 0, velY = 0, idleAt = 0, drag = null, visible = false, raf = 0, built = null, t0 = performance.now(), ro = null;
 
   const loadThree = () => window.THREE ? Promise.resolve(window.THREE) : new Promise((res, rej) => { const s = document.createElement('script'); s.src = THREE_URL; s.onload = () => window.THREE ? res(window.THREE) : rej(); s.onerror = rej; document.head.appendChild(s); });
   const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
   function buildHead(g){
-    const male = g !== 'female', M = male ? 1 : 0, X = .76, Y = 1, Z = .90, grpN = new T.Group();
-    const dir = (xw, yw) => { const x = xw / X, y = yw / Y; return new T.Vector3(x, y, Math.sqrt(Math.max(.02, 1 - x * x - y * y))); };
-    const F = [], add = (xw, yw, s, a, mir) => { F.push({ d: dir(xw, yw), s, a }); if (mir) F.push({ d: dir(-xw, yw), s, a }); };
-    add(0, .31, .16, .03 + .06 * M); add(.22, .30, .13, .03 + .06 * M, 1);          // brow ridge
-    add(.30, .13, .12, -(.07 + .02 * M), 1);                                          // eye sockets
-    add(0, .60, .30, .03);                                                           // forehead
-    add(0, .10, .07, .10); add(0, -.05, .075, .16 + .03 * M); add(0, -.19, .09, .27 + .05 * M); add(.10, -.23, .065, .13 + .02 * M, 1); // nose
-    add(.52, -.02, .15, .05 + .015 * M, 1); add(.40, -.30, .15, -.03, 1); add(.42, -.18, .16, .03 - .01 * M, 1); // cheeks
-    add(.17, -.34, .11, .035, 1);                                                    // maxilla
-    add(0, -.43, .10, .075 + (1 - M) * .02); add(0, -.545, .105, .09 + (1 - M) * .025); add(0, -.485, .045, -.05); // lips
-    add(0, -.64, .07, -.04); add(0, -.79, .13, .09 + .04 * M);                      // sulcus + chin
-    add(.62, -.50, .15, .01 + .05 * M, 1);                                           // jaw angle
-    F.push({ d: new T.Vector3(1, .03, 0), s: .22, a: .13 }, { d: new T.Vector3(-1, .03, 0), s: .22, a: .13 }); // ears
-    const shape = v => {
-      const taper = 1 - (male ? .16 : .26) * sm(.0, -.85, v.y); let k = 0;
-      for (let i = 0; i < F.length; i++) { const q = F[i], dx = v.x - q.d.x, dy = v.y - q.d.y, dz = v.z - q.d.z; k += q.a * Math.exp(-(dx * dx + dy * dy + dz * dz) / (2 * q.s * q.s)); }
-      const sq = (a, e) => Math.sign(a) * Math.pow(Math.abs(a), e);
-      const yy = v.y < 0 ? -Math.pow(-v.y, .78) * .93 : v.y, ex = male ? .80 : .86;
-      return new T.Vector3(sq(v.x, ex) * X * taper, yy * Y, sq(v.z, .88) * Z).multiplyScalar(1 + k);
+    const male = g !== 'female', TAU = Math.PI * 2, GOLD = 0xc9ab2f, WHITE = 0xf0f0f0;
+    const lerp = (p, q, t) => p + (q - p) * t, clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    /* cross-section profile per height: [y, halfWidth a, halfDepth b, centerZ c, squareness n] */
+    const K = male
+      ? [[1.00,.02,.03,-.06,2],[.92,.36,.46,-.05,2.2],[.72,.62,.78,-.03,2.3],[.42,.735,.90,-.02,2.4],[.10,.75,.90,0,2.5],[-.20,.72,.88,.02,2.6],[-.45,.67,.80,.05,3.0],[-.70,.55,.68,.09,3.5],[-.88,.40,.56,.12,4.0],[-.98,.31,.47,.14,4.4],[-1.03,.05,.10,.14,2]]
+      : [[1.00,.02,.03,-.06,2],[.92,.34,.44,-.05,2.1],[.72,.60,.76,-.03,2.2],[.42,.69,.88,-.02,2.3],[.10,.70,.88,0,2.35],[-.20,.66,.85,.02,2.4],[-.45,.57,.77,.05,2.45],[-.70,.42,.64,.09,2.55],[-.88,.28,.52,.12,2.7],[-.98,.20,.43,.14,2.9],[-1.03,.04,.10,.14,2]];
+    const prof = y => {
+      y = clamp(y, -1.03, 1); let i = 0; while (i < K.length - 2 && y < K[i + 1][0]) i++;
+      let t = (K[i][0] - y) / (K[i][0] - K[i + 1][0]); t = t * t * (3 - 2 * t); const p = K[i], q = K[i + 1];
+      return { a: lerp(p[1], q[1], t), b: lerp(p[2], q[2], t), c: lerp(p[3], q[3], t), n: lerp(p[4], q[4], t) };
     };
+    const sp = (v, e) => Math.sign(v) * Math.pow(Math.abs(v), e);
+    const base = (y, ph) => { const q = prof(y), e = 2 / q.n; return new T.Vector3(q.a * sp(Math.cos(ph), e), y, q.c + q.b * sp(Math.sin(ph), e)); };
+    const nrm = (y, ph) => { const e = 1e-3, dp = base(y, ph + e).sub(base(y, ph - e)), dy = base(y + e, ph).sub(base(y - e, ph)); return new T.Vector3().crossVectors(dy, dp).normalize(); };
+    const phOf = (x, y) => { const q = prof(y); return Math.acos(clamp(Math.sign(x) * Math.pow(Math.min(1, Math.abs(x) / q.a), q.n / 2), -1, 1)); };
+    /* facial features pushed out of / into the surface */
+    const F = [], add = (x, y, s, amp, mir) => { F.push({ c: base(y, phOf(x, y)), s, a: amp }); if (mir && x) F.push({ c: base(y, phOf(-x, y)), s, a: amp }); };
+    const M = male ? 1 : 0;
+    add(0, .26, .15, .03 + .06 * M); add(.22, .25, .12, .03 + .06 * M, 1);          // brow ridge
+    add(.30, .10, .11, -(.07 + .02 * M), 1);                                          // eye sockets
+    add(0, .55, .28, .03);                                                           // forehead
+    add(0, .08, .07, .10); add(0, -.08, .075, .16 + .03 * M); add(0, -.22, .09, .26 + .05 * M); add(.11, -.25, .065, .13 + .02 * M, 1); // nose
+    add(.52, -.05, .15, .05 + .015 * M, 1); add(.40, -.38, .15, -.03, 1); add(.42, -.25, .16, .03 - .01 * M, 1); // cheeks
+    add(.17, -.42, .11, .035, 1);                                                    // maxilla
+    add(0, -.54, .10, .07 + (1 - M) * .025); add(0, -.66, .105, .085 + (1 - M) * .03); add(0, -.60, .045, -.05); // lips
+    add(0, -.77, .07, -.04); add(0, -.93, .13, .08 + .04 * M);                       // sulcus + chin
+    add(.62, -.60, .15, .01 + .05 * M, 1);                                           // jaw angle
+    const disp = (p, n) => { let k = 0; for (let i = 0; i < F.length; i++) { const f = F[i], dx = p.x - f.c.x, dy = p.y - f.c.y, dz = p.z - f.c.z; k += f.a * Math.exp(-(dx * dx + dy * dy + dz * dz) / (2 * f.s * f.s)); } return p.addScaledVector(n, k); };
+    const surf = (x, y, off) => { const ph = phOf(x, y), n = nrm(y, ph); return disp(base(y, ph), n).addScaledVector(n, off == null ? .006 : off); };
+    const sNorm = (x, y) => nrm(y, phOf(x, y));
+    /* lofted skull */
+    const R = 76, S = 100;
+    const loft = () => {
+      const pos = [], idx = [];
+      for (let k = 0; k <= R; k++) { const y = 1 - k * (2.03 / R); for (let j = 0; j <= S; j++) { const ph = 1.5 * Math.PI + j / S * TAU, p = disp(base(y, ph), nrm(y, ph)); pos.push(p.x, p.y, p.z); } }
+      for (let k = 0; k < R; k++) for (let j = 0; j < S; j++) { const a = k * (S + 1) + j, b = a + 1, c = a + S + 1, d = c + 1; idx.push(a, b, c, b, d, c); }
+      const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals(); return geo;
+    };
+    /* line-art shader: silhouette + creases + faint contours */
     const vs = 'varying vec3 vN;varying vec3 vP;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vP=position;vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}';
-    const fs = 'uniform float uT;uniform float uL;uniform float uA;uniform float uR;varying vec3 vN;varying vec3 vP;varying vec3 vV;void main(){float rim=pow(1.0-abs(dot(normalize(vN),normalize(vV))),2.4);float l=abs(fract(vP.y*uL)-.5);float line=1.0-smoothstep(.0,.09,l);float ang=atan(vP.x,vP.z)*uL*.16;float m=1.0-smoothstep(.0,.07,abs(fract(ang)-.5));float band=exp(-pow((vP.y-sin(uT*.8)*1.1)*7.0,2.0));float lam=max(dot(normalize(vN),normalize(vec3(.25,.45,1.0))),0.0);float a=uA+.34*line+.08*m+uR*rim+.32*band+.22*lam*uR;gl_FragColor=vec4(vec3(1.0),clamp(a,0.,1.));}';
-    const mat = (L, A, Rm) => new T.ShaderMaterial({ vertexShader: vs, fragmentShader: fs, transparent: true, uniforms: { uT: uni.uT, uL: { value: L }, uA: { value: A }, uR: { value: Rm == null ? .95 : Rm } } });
-    const sk = new T.SphereGeometry(1, 80, 60), pos = sk.attributes.position, V = new T.Vector3();
-    for (let i = 0; i < pos.count; i++) { V.fromBufferAttribute(pos, i); const p = shape(V); pos.setXYZ(i, p.x, p.y, p.z); }
-    sk.computeVertexNormals(); grpN.add(new T.Mesh(sk, mat(26, .05)));
-    // hair shell
-    const hg = new T.SphereGeometry(1, 72, 54), hp = hg.attributes.position;
-    for (let i = 0; i < hp.count; i++) { V.fromBufferAttribute(hp, i); const p = shape(V).multiplyScalar(1.05); hp.setXYZ(i, p.x, p.y + .02, p.z); }
-    const ix = hg.index.array, keep = [], thr = (x, z) => .60 - .52 * sm(.5, .74, Math.abs(x)) - (male ? .9 : 1.45) * sm(.1, -.5, z);
-    for (let i = 0; i < ix.length; i += 3) { const a = ix[i], b = ix[i + 1], c = ix[i + 2]; if ((hp.getY(a) + hp.getY(b) + hp.getY(c)) / 3 > thr((hp.getX(a) + hp.getX(b) + hp.getX(c)) / 3, (hp.getZ(a) + hp.getZ(b) + hp.getZ(c)) / 3)) keep.push(a, b, c); }
-    hg.setIndex(keep); hg.computeVertexNormals(); grpN.add(new T.Mesh(hg, mat(34, 0, .35)));
-    // neck
-    const nk = new T.Mesh(new T.CylinderGeometry(.30, .36, .9, 36, 14, true), mat(26, .02, .6)); nk.position.y = -1.18; grpN.add(nk);
-    // eyes
-    const wm = o => new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: o });
-    [-1, 1].forEach(s => {
-      const p = shape(dir(s * .30, .13)), eye = new T.Mesh(new T.SphereGeometry(.07, 16, 12), wm(.2)); eye.position.copy(p).add(new T.Vector3(0, 0, -.03)); grpN.add(eye);
-      const ring = new T.Mesh(new T.RingGeometry(.026, .042, 24), wm(.95)); ring.position.copy(p).add(new T.Vector3(0, 0, .04)); grpN.add(ring);
-      const pts = []; for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push(shape(dir(s * (.12 + .34 * t), .315 + (male ? .012 : .04) * Math.sin(t * Math.PI * .9))).multiplyScalar(1.012)); }
-      grpN.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 20, male ? .012 : .008, 6), wm(.9)));
+    const fs = 'uniform float uT;uniform float uC;uniform float uK;uniform float uS;varying vec3 vN;varying vec3 vP;varying vec3 vV;void main(){vec3 n=normalize(vN);float ndv=abs(dot(n,normalize(vV)));float w=fwidth(ndv)+1e-4;float sil=1.0-smoothstep(w*.6,w*2.4,ndv);float cr=length(fwidth(n));float crease=smoothstep(.10,.26,cr);float cont=(1.0-smoothstep(.0,.08,abs(fract(vP.y*20.0)-.5)))*uC;float ang=atan(vP.x,vP.z+.05)*16.0/6.2832;float strand=(1.0-smoothstep(.0,.07,abs(fract(ang)-.5)))*uS;float band=exp(-pow((vP.y-sin(uT*.8)*1.1)*8.0,2.0))*.07;float a=max(max(sil*.95,crease*uK),max(cont,strand))+band;gl_FragColor=vec4(vec3(.94),clamp(a,0.,1.));}';
+    const lineMat = (C, K2, S2) => new T.ShaderMaterial({ vertexShader: vs, fragmentShader: fs, transparent: true, extensions: { derivatives: true }, uniforms: { uT: uni.uT, uC: { value: C }, uK: { value: K2 }, uS: { value: S2 } } });
+    const depthMat = () => new T.MeshBasicMaterial({ colorWrite: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+    const grpN = new T.Group(), basic = c => new T.MeshBasicMaterial({ color: c });
+    const solid = (geo, C, K2, S2, pre) => { const m = new T.Mesh(geo, lineMat(C, K2, S2)); if (pre) { const d = new T.Mesh(geo, depthMat()); d.renderOrder = -5; grpN.add(d); } grpN.add(m); return m; };
+    const hg = loft(); solid(hg, .035, .55, 0, true);
+    /* hair shell */
+    const hh = loft(), hp = hh.attributes.position;
+    for (let i = 0; i < hp.count; i++) hp.setXYZ(i, hp.getX(i) * 1.045, (hp.getY(i) - .1) * 1.045 + .1 + .015, hp.getZ(i) * 1.045);
+    const hix = hh.index.array, keep = [], thr = (x, z) => .64 - Math.max(.55 * sm(.5, .76, Math.abs(x)), (male ? .85 : 1.3) * sm(.1, -.55, z));
+    for (let i = 0; i < hix.length; i += 3) { const a = hix[i], b = hix[i + 1], c = hix[i + 2]; if ((hp.getY(a) + hp.getY(b) + hp.getY(c)) / 3 > thr((hp.getX(a) + hp.getX(b) + hp.getX(c)) / 3, (hp.getZ(a) + hp.getZ(b) + hp.getZ(c)) / 3)) keep.push(a, b, c); }
+    hh.setIndex(keep); hh.computeVertexNormals(); solid(hh, .12, .2, 0, false);
+    /* ears + neck */
+    [-1, 1].forEach(s => { const e = new T.SphereGeometry(1, 28, 20); e.scale(.04, .21, .11); e.rotateY(-s * .5); e.rotateZ(s * .1); e.translate(s * (prof(-.05).a + .02), -.05, prof(-.05).c - .09); solid(e, 0, 1, 0, true); });
+    const nk = new T.CylinderGeometry(.31, .37, .9, 44, 10, true); nk.translate(0, -1.46, -.02); solid(nk, .05, .45, 0, true);
+    /* helper to draw a thin curve on the face */
+    const tube = (pts, r, col, closed) => { const m = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts, closed), Math.max(12, pts.length * 5), r, 5, closed), basic(col)); grpN.add(m); return m; };
+    const onFace = (list, off) => list.map(q => surf(q[0], q[1], off));
+    /* gold proportion guides */
+    const gv = []; for (let y = .97; y >= -.99; y -= .04) gv.push(surf(0, y, .01)); tube(gv, .0045, GOLD);
+    [.26, .10, -.28, -.60].forEach(y => {
+      const q = prof(y), pts = [], bw = y > .2 ? 0 : y > 0 ? .13 : y > -.4 ? .17 : 0; for (let x = -q.a * .97; x <= q.a * .97; x += q.a * .97 / 12) pts.push(surf(x, y, .01));
+      if (bw) { const iL = pts.findIndex(p => p.x > -bw), iR = pts.length - 1 - [...pts].reverse().findIndex(p => p.x < bw); if (iL > 0 && iR < pts.length - 1 && iR > iL) { const A = pts[iL - 1], Bp = pts[iR + 1]; for (let i = iL; i <= iR; i++) { const t = (i - iL + 1) / (iR - iL + 2); pts[i] = A.clone().lerp(Bp, t); } } }
+      const l = pts[0].clone(), r = pts[pts.length - 1].clone(); pts.unshift(new T.Vector3(l.x - .2, l.y, l.z)); pts.push(new T.Vector3(r.x + .2, r.y, r.z)); tube(pts, .0038, GOLD);
     });
-    // base rings
-    rings = [1.0, 1.28].map((r, i) => { const m = new T.Mesh(new T.RingGeometry(r, r + .012, 80), wm(i ? .25 : .5)); m.rotation.x = -Math.PI / 2; m.position.y = -1.62; grpN.add(m); return m; });
-    ANCH.forEach(a => { const p = shape(dir(a[1], a[2])).multiplyScalar(a[3] || 1); hs[a[0]].p = p; hs[a[0]].n = p.clone().normalize(); });
+    [.88, -.28, -.78].forEach(y => { const p = surf(0, y, .012), n = sNorm(0, y), m = new T.Mesh(new T.RingGeometry(.05, .058, 32), new T.MeshBasicMaterial({ color: GOLD, side: T.DoubleSide })); m.scale.set(1, .26, 1); m.position.copy(p); m.lookAt(p.clone().add(n)); grpN.add(m); });
+    /* eyes */
+    [-1, 1].forEach(s => {
+      const up = [], lo = []; for (let i = 0; i <= 10; i++) { const t = i / 10, x = s * (.16 + .29 * t); up.push([x, .09 + .02 * t + .05 * Math.pow(Math.sin(Math.PI * t), .8)]); lo.push([x, .09 + .02 * t - .026 * Math.sin(Math.PI * t)]); }
+      tube(onFace(up, .012), .0055, WHITE); tube(onFace(lo, .011), .0042, WHITE);
+      const ir = [], pu = []; for (let i = 0; i < 20; i++) { const t = i / 20 * TAU; ir.push([s * .31 + Math.cos(t) * .034, .112 + Math.sin(t) * .034]); pu.push([s * .31 + Math.cos(t) * .012, .112 + Math.sin(t) * .012]); }
+      tube(onFace(ir, .013), .0035, WHITE, true); tube(onFace(pu, .014), .006, WHITE, true);
+      const br = []; for (let i = 0; i <= 12; i++) { const t = i / 12; br.push([s * (.11 + .37 * t), .255 + (male ? .02 : .045) * Math.sin(Math.PI * t * .85) - (male ? 0 : .012) * t]); }
+      tube(onFace(br, .016), male ? .011 : .007, WHITE);
+      const nw = [[.07, -.20], [.115, -.235], [.135, -.265], [.105, -.285], [.062, -.292]].map(q => [s * q[0], q[1]]); tube(onFace(nw, .012), .0045, WHITE);
+    });
+    tube(onFace([[-.055, -.29], [0, -.30], [.055, -.29]], .02), .0045, WHITE);
+    tube(onFace([[-.19, -.598], [-.1, -.603], [0, -.598], [.1, -.603], [.19, -.598]], .012), .0045, WHITE);
+    tube(onFace([[-.17, -.585], [-.1, -.56], [-.04, -.545], [0, -.553], [.04, -.545], [.1, -.56], [.17, -.585]], .014), .0042, WHITE);
+    tube(onFace([[-.15, -.625], [-.08, -.668], [0, -.685], [.08, -.668], [.15, -.625]], .014), .0042, WHITE);
+    [-1, 1].forEach(s => tube(onFace([[s * .026, -.305], [s * .03, -.43], [s * .03, -.53]], .012), .0028, WHITE));
+    [-1, 1].forEach(s => tube([new T.Vector3(s * .36, -1.62, -.02), new T.Vector3(s * .62, -1.74, .02), new T.Vector3(s * 1.0, -1.86, .08), new T.Vector3(s * 1.5, -2.1, .12)], .0042, WHITE));
+    rings = [];
+    ANCH.forEach(a => { const off = a[3] ? .1 : .03, p = surf(a[1], a[2], off), n = sNorm(a[1], a[2]); hs[a[0]].p = p; hs[a[0]].n = n; });
     return grpN;
   }
 
@@ -1219,7 +1258,7 @@ function initFace(ctx){
     try {
       if (!R) {
         R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); R.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-        scene = new T.Scene(); cam = new T.PerspectiveCamera(32, 1, .1, 50); cam.position.set(0, -.05, 5.1); cam.lookAt(0, -.1, 0);
+        scene = new T.Scene(); cam = new T.PerspectiveCamera(34, 1, .1, 50); cam.position.set(0, -.12, 4.5); cam.lookAt(0, -.2, 0);
         cv.addEventListener('pointerdown', e => { drag = { x: e.clientX }; velY = 0; cv.setPointerCapture(e.pointerId); });
         cv.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x; drag.x = e.clientX; rotY += dx * .008; velY = dx * .002; idleAt = performance.now(); });
         const up = () => { drag = null; idleAt = performance.now(); }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -1231,7 +1270,7 @@ function initFace(ctx){
   }
   function resize(){ if (!R) return; const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
   function frame(now){
-    raf = requestAnimationFrame(frame); if (!visible || !R || !grp) return;
+    raf = requestAnimationFrame(frame); if (!visible || paused || !R || !grp) return;
     const t = (now - t0) / 1000;
     if (!drag) { if (now - idleAt > 1800) { rotY += (Math.sin(t * .35) * .6 - rotY) * .02; rotX += (0 - rotX) * .03; } rotY += velY; velY *= .92; }
     grp.rotation.set(rotX, rotY, 0); uni.uT.value = t; rings.forEach((r, i) => r.rotation.z += i ? -.003 : .002);
@@ -1414,10 +1453,10 @@ function initFace(ctx){
     sc.busy = false;
   }
   async function openScan(){
-    Object.values(sc.shots).forEach(s => URL.revokeObjectURL(s.url)); sc.shots = {}; sc.i = 0; sc.busy = false;
+    paused = true; Object.values(sc.shots).forEach(s => URL.revokeObjectURL(s.url)); sc.shots = {}; sc.i = 0; sc.busy = false;
     if (modal) modal.remove(); buildScan(); showM('mScan'); scanUI(); await startCam(); scanUI();
   }
-  function closeScan(){ stopCam(); if (modal) modal.classList.add('hide'); Object.values(sc.shots).forEach(s => URL.revokeObjectURL(s.url)); sc.shots = {}; }
+  function closeScan(){ paused = false; stopCam(); if (modal) modal.classList.add('hide'); Object.values(sc.shots).forEach(s => URL.revokeObjectURL(s.url)); sc.shots = {}; }
   scanBtn.onclick = openScan;
 
   /* ---------- api ---------- */
